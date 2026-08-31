@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------
+    // Creator Profiles
+    // A single profile is publicly fetchable by ID (needed for the
+    // shareable media kit / brand portal), but the full collection can
+    // never be listed/scraped, and only the owning creator (matched by
+    // Firebase Auth uid) may write their own profile.
+    // ---------------------------------------------------------------
+    match /creators/{creatorId} {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if request.auth != null
+                             && request.auth.uid == creatorId;
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------
+    // Deals & Contracts
+    //
+    // - get (single doc, by ID): open. Deal IDs are unguessable random
+    //   tokens (src/utils/id.ts) and function as capability URLs for the
+    //   brand-facing portal — knowing the ID *is* the access grant.
+    // - list (collection queries, e.g. the creator dashboard): requires
+    //   auth, and Firestore evaluates this rule per returned document,
+    //   so a signed-in creator can only ever successfully list deals
+    //   that are actually theirs (the app queries `where creatorId ==
+    //   auth.uid`; any attempt to list without that filter is denied
+    //   outright because at least one returned doc would fail the check).
+    // - writes: the owning creator can write anything; an unauthenticated
+    //   brand on a portal link may only flip a small allow-list of
+    //   fields (signature/payment/status) and can never touch amounts,
+    //   deliverables, or ownership.
+    // ---------------------------------------------------------------
+    match /deals/{dealId} {
+      allow get: if true;
+      allow list: if request.auth != null
+                  && resource.data.creatorId == request.auth.uid;
+
+      allow create: if request.auth != null
+                    && request.resource.data.creatorId == request.auth.uid;
+
+      allow update: if isOwner() || isAllowedBrandUpdate();
+
+      allow delete: if isOwner();
+
+      function isOwner() {
+        return request.auth != null
+               && request.auth.uid == resource.data.creatorId;
+      }
+
+      function isAllowedBrandUpdate() {
+        let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+        // NOTE: no payment fields here on purpose. Marking a deal 'paid' is
+        // done exclusively by the verifyPaystackPayment Cloud Function
+        // (functions/index.js) using the Admin SDK, which bypasses these
+        // rules entirely after independently confirming the charge with
+        // Paystack. A brand's own browser can only ever counter-sign
+        // (clientSigned/signature) or move status to 'active' — never 'paid'.
+        let allowedKeys = ['clientSigned', 'signature', 'signedAt', 'status', 'messages'];
+        let statusOk = !changedKeys.hasAny(['status'])
+          || request.resource.data.status == 'active';
+        return changedKeys.hasOnly(allowedKeys)
+          && request.resource.data.creatorId == resource.data.creatorId
+          && request.resource.data.totalAmount == resource.data.totalAmount
+          && request.resource.data.invoiceNumber == resource.data.invoiceNumber
+          && statusOk;
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // Audit logs (immutable signature/payment trail)
+    // Anyone completing a signature can append a log entry, but only the
+    // owning creator may ever read them back (get or list), and nothing
+    // is ever editable or deletable.
+    // ---------------------------------------------------------------
+    match /audit_logs/{logId} {
+      allow create: if request.resource.data.creatorId is string
+                    && request.resource.data.creatorId.size() > 0;
+      allow get: if request.auth != null
+                 && request.auth.uid == resource.data.creatorId;
+      allow list: if request.auth != null
+                  && resource.data.creatorId == request.auth.uid;
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,13 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Firebase Admin SDK service account credentials — used only to run
+# scripts/migrate-creator-id.js locally, never committed, never deployed.
+serviceAccountKey*.json
+scripts/*-service-account*.json

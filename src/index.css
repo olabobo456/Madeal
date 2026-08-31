@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: #FAF3EC;
+    color: #230B0D;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+/* Elegant Burgundy & Beige Palette Tokens (#59171b & #fed7b8) */
+.bg-canvas {
+  background-color: #FAF3EC;
+}
+
+.bg-burgundy-primary {
+  background-color: #59171B;
+}
+
+.text-burgundy-primary {
+  color: #59171B;
+}
+
+.bg-beige-accent {
+  background-color: #FED7B8;
+}
+
+.text-beige-accent {
+  color: #FED7B8;
+}
+
+.border-warm-beige {
+  border-color: #ECD9CB;
+}
+
+/* Gradients derived from the user's color palette */
+.bg-burgundy-gradient {
+  background: linear-gradient(135deg, #59171B 0%, #752026 50%, #943A36 100%);
+}
+
+.bg-burgundy-beige-gradient {
+  background: linear-gradient(180deg, #59171B 0%, #B25A51 50%, #FED7B8 100%);
+}
+
+.bg-beige-silk-glow {
+  background: radial-gradient(circle at top right, rgba(254, 215, 184, 0.45) 0%, rgba(255, 255, 255, 0.96) 65%);
+}
+
+.bg-card-glass {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+}
+
+/* Payno & Luxury Silk Shadows */
+.shadow-payno-sm {
+  box-shadow: 0 4px 14px -2px rgba(89, 23, 27, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.shadow-payno-md {
+  box-shadow: 0 10px 24px -4px rgba(89, 23, 27, 0.09), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
+}
+
+.shadow-payno-lg {
+  box-shadow: 0 20px 32px -6px rgba(89, 23, 27, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
+}
+
+/* Custom scrollbar in warm champagne / burgundy */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FAF3EC;
+}
+::-webkit-scrollbar-thumb {
+  background: #E5CDBE;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #59171B;
+}
+
+/* Print styles for exportable contract & invoice */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #1A1A1A !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+

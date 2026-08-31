@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "CreatorProfile": {
+      "title": "CreatorProfile",
+      "description": "Creator profile and payout information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "handle": { "type": "string" },
+        "email": { "type": "string" },
+        "avatar": { "type": "string" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "Deal": {
+      "title": "Deal",
+      "description": "Sponsorship contract deal and invoice",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "brandName": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "brandName", "totalAmount", "status"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Cryptographic signature audit log",
+      "type": "object",
+      "properties": {
+        "dealId": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "signedAt": { "type": "string" }
+      },
+      "required": ["dealId", "invoiceNumber"]
+    }
+  },
+  "firestore": {
+    "/creators/{creatorId}": {
+      "schema": "CreatorProfile",
+      "description": "Creator profile configurations"
+    },
+    "/deals/{dealId}": {
+      "schema": "Deal",
+      "description": "Sponsorship deal agreements and deliverables"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Audit trail entries for signed contracts"
+    }
+  }
+}

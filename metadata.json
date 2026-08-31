@@ -1,0 +1,6 @@
+{
+  "name": "Madeal",
+  "description": "Creator deal tracking, contract drafting, brand invoices, and client communication management platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

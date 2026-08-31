@@ -1,0 +1,14 @@
+{
+  "firestore": {
+    "database": "ai-studio-madeal-1d73da09-3136-445a-9578-c3a910a6802c",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs20"
+    }
+  ]
+}
