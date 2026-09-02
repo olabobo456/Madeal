@@ -29,10 +29,9 @@ service cloud.firestore {
 
       function isAllowedBrandUpdate() {
         let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
-        let allowedKeys = ['clientSigned', 'signature', 'signedAt', 'status', 'messages', 'paidAt', 'paymentMethodUsed', 'paymentTransactionId', 'deliverables', 'notes', 'clientEmail'];
+        let allowedKeys = ['clientSigned', 'signature', 'signedAt', 'status', 'messages'];
         let statusOk = !changedKeys.hasAny(['status'])
-          || request.resource.data.status == 'active'
-          || request.resource.data.status == 'paid';
+          || request.resource.data.status == 'active';
         return changedKeys.hasOnly(allowedKeys)
           && request.resource.data.creatorId == resource.data.creatorId
           && request.resource.data.totalAmount == resource.data.totalAmount

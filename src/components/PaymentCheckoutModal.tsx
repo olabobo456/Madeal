@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Building,
   Download,
-  Receipt,
   AlertCircle,
   ExternalLink,
   Copy,
@@ -60,7 +59,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
   onClose,
   onPaymentSuccess,
 }) => {
-  const [paymentTab, setPaymentTab] = useState<'card' | 'wire' | 'manual'>('card');
+  const [paymentTab, setPaymentTab] = useState<'card' | 'wire'>('card');
   const [billingEmail, setBillingEmail] = useState(deal.clientEmail || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -197,41 +196,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
     }, 600);
   };
 
-  const handleManualSettlementSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wireReference.trim()) {
-      setPaymentError('Please enter a transaction ID, check number, or remittance reference.');
-      return;
-    }
 
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      const ref = wireReference.trim();
-      setTransactionId(ref);
-      setIsSuccess(true);
-
-      const now = new Date().toISOString();
-      const updatedDeal: Deal = {
-        ...deal,
-        status: 'paid',
-        paidAt: now,
-        paymentMethodUsed: prefs.preferredMethod === 'paypal' ? 'PayPal' : prefs.preferredMethod === 'payment_link' ? 'Online Gateway' : 'Bank Wire / ACH',
-        paymentTransactionId: ref,
-        messages: [
-          ...deal.messages,
-          {
-            id: 'msg-settled-' + Date.now(),
-            sender: 'brand',
-            senderName: deal.brandName,
-            text: `Marked invoice ${deal.invoiceNumber} as settled (${formatMoney(deal.totalAmount, currency)}). Remittance Ref: ${ref}.`,
-            timestamp: 'Just now',
-          },
-        ],
-      };
-      onPaymentSuccess(updatedDeal);
-    }, 600);
-  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
@@ -352,7 +317,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
               </div>
 
               {/* Payment Methods Tab Selector */}
-              <div className="grid grid-cols-3 gap-1 bg-[#FAF3EC] p-1 rounded-2xl border border-[#ECD9CB] text-xs">
+              <div className="grid grid-cols-2 gap-1 bg-[#FAF3EC] p-1 rounded-2xl border border-[#ECD9CB] text-xs">
                 <button
                   type="button"
                   onClick={() => setPaymentTab('card')}
@@ -377,19 +342,6 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 >
                   <Building className="w-3.5 h-3.5" />
                   <span className="truncate">Bank Wire / ACH</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentTab('manual')}
-                  className={`py-2 px-1 rounded-xl font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                    paymentTab === 'manual'
-                      ? 'bg-white text-[#59171B] shadow-payno-sm'
-                      : 'text-[#7E635F] hover:text-[#230B0D]'
-                  }`}
-                >
-                  <Receipt className="w-3.5 h-3.5" />
-                  <span className="truncate">Confirm Proof</span>
                 </button>
               </div>
 
@@ -422,7 +374,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                         <span>Open Secure Checkout ({formatMoney(deal.totalAmount, currency)})</span>
                       </a>
                       <p className="text-[10px] text-[#7E635F] text-center">
-                        After completing the transaction, click the "Confirm Proof" tab above to log your reference ID.
+                        Payments through this link cannot be verified automatically — message the brand to confirm once settled, or ask them to use Paystack instead.
                       </p>
                     </div>
                   ) : PAYSTACK_PUBLIC_KEY ? (
@@ -598,41 +550,6 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 3: Confirm Settlement Proof (Accounting / Corporate Wire) */}
-              {paymentTab === 'manual' && (
-                <form onSubmit={handleManualSettlementSubmit} className="space-y-3 bg-white p-4 rounded-2xl border border-[#ECD9CB] text-xs">
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#59171B]">
-                    <Receipt className="w-4 h-4" />
-                    <span>Submit Remittance Proof / Transaction ID</span>
-                  </div>
-                  <p className="text-xs text-[#7E635F]">
-                    If your accounts payable department has already executed the wire or corporate card transfer, enter your transaction reference number to log the settlement and download the tax invoice.
-                  </p>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-[#7E635F] uppercase block mb-1">
-                      Transaction Reference / Wire ID / Check #
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={wireReference}
-                      onChange={(e) => setWireReference(e.target.value)}
-                      placeholder="e.g. WIRE-84920194 or TXN_982402"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#ECD9CB] bg-white text-xs font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-[#59171B]/30"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="w-full py-3 rounded-2xl bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold text-xs shadow-payno-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirm Settlement &amp; Generate Tax Receipt</span>
-                  </button>
-                </form>
-              )}
 
               {/* Download Tax Invoice link */}
               <div className="flex items-center justify-between pt-1 text-xs">
