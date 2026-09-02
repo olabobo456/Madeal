@@ -9,12 +9,12 @@ import {
   CheckCircle2,
   Lock,
   Check,
-  Sparkles,
   Building,
   Link2,
   ExternalLink,
   CreditCard,
   Eye,
+  Trash2,
 } from 'lucide-react';
 import { TermInfoTooltip } from './TermInfoTooltip';
 import { DeliverableTracker } from './DeliverableTracker';
@@ -34,6 +34,7 @@ interface ContractSignViewProps {
   onBack: () => void;
   onOpenMessages: () => void;
   onOpenBrandPreview?: (deal: Deal) => void;
+  onDeleteDeal?: (dealId: string) => void;
 }
 
 export const ContractSignView: React.FC<ContractSignViewProps> = ({
@@ -44,6 +45,7 @@ export const ContractSignView: React.FC<ContractSignViewProps> = ({
   onBack,
   onOpenMessages,
   onOpenBrandPreview,
+  onDeleteDeal,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -169,13 +171,15 @@ export const ContractSignView: React.FC<ContractSignViewProps> = ({
   const payPref = creator?.paymentPreferences || {
     preferredMethod: 'bank_transfer',
     paymentLink: '',
-    bankName: 'Standard Chartered / Global International Bank',
-    accountName: 'Sarah Jenkins Creative Studio',
-    accountNumber: '••••••••4892',
-    routingNumber: '121000358',
-    swiftBic: 'GLBAUS33',
-    customInstructions: 'Please quote invoice reference number in payment details. Settlement due within 30 days.',
+    bankName: '',
+    accountName: creator?.name || '',
+    accountNumber: '',
+    routingNumber: '',
+    swiftBic: '',
+    customInstructions: '',
   };
+
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   return (
     <div className="space-y-6 pb-32">
@@ -242,6 +246,36 @@ export const ContractSignView: React.FC<ContractSignViewProps> = ({
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Settled & Paid</span>
             </span>
+          )}
+
+          {onDeleteDeal && (
+            isConfirmingDelete ? (
+              <div className="flex items-center gap-1 bg-red-50 p-1 rounded-xl border border-red-200">
+                <button
+                  type="button"
+                  onClick={() => onDeleteDeal(deal.id)}
+                  className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold"
+                >
+                  Confirm Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(false)}
+                  className="px-2 py-1 text-xs text-stone-600 hover:bg-white rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsConfirmingDelete(true)}
+                className="p-2 text-[#7E635F] hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-red-200"
+                title="Delete this deal"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )
           )}
         </div>
       </div>

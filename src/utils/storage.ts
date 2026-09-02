@@ -1,46 +1,76 @@
 import { Deal, CreatorProfile } from '../types';
-import { initialDeals, initialCreatorProfile } from '../data/mockData';
 
-const DEALS_KEY = 'madeal_deals_v1';
-const PROFILE_KEY = 'madeal_profile_v1';
-
-export function getStoredDeals(): Deal[] {
+export function getStoredDeals(creatorId?: string): Deal[] {
+  if (!creatorId) return [];
   try {
-    const data = localStorage.getItem(DEALS_KEY);
-    if (!data) {
-      localStorage.setItem(DEALS_KEY, JSON.stringify(initialDeals));
-      return initialDeals;
-    }
+    const data = localStorage.getItem(`madeal_deals_${creatorId}`);
+    if (!data) return [];
     return JSON.parse(data);
   } catch {
-    return initialDeals;
+    return [];
   }
 }
 
-export function saveStoredDeals(deals: Deal[]): void {
+export function saveStoredDeals(deals: Deal[], creatorId?: string): void {
+  if (!creatorId) return;
   try {
-    localStorage.setItem(DEALS_KEY, JSON.stringify(deals));
+    localStorage.setItem(`madeal_deals_${creatorId}`, JSON.stringify(deals));
   } catch (e) {
     console.error('Failed to save deals to localStorage', e);
   }
 }
 
-export function getStoredProfile(): CreatorProfile {
+export function getStoredProfile(
+  creatorId?: string,
+  fallbackUser?: { displayName?: string | null; email?: string | null; photoURL?: string | null }
+): CreatorProfile {
+  const defaultBlank: CreatorProfile = {
+    name: fallbackUser?.displayName || 'Creator',
+    handle: (fallbackUser?.displayName || 'creator').toLowerCase().replace(/[^a-z0-9]/g, '') || 'creator',
+    email: fallbackUser?.email || '',
+    avatarUrl: fallbackUser?.photoURL || undefined,
+    niche: 'Content Creator',
+    bio: '',
+    location: '',
+    totalEarnings: 0,
+    monthlyGrowthPercent: 0,
+    defaultCurrency: 'USD',
+    defaultTaxRate: 0,
+    plan: 'free',
+    emailAlerts: {
+      onCountersign: true,
+      onPaymentReceived: true,
+      onDeliverableSubmitted: true,
+      onOverdueReminder: true,
+      notificationEmail: fallbackUser?.email || '',
+    },
+    audienceStats: {
+      totalFollowers: '0',
+      avgEngagementRate: '0%',
+      monthlyImpressions: '0',
+      topDemographic: 'General Audience',
+      topCountry: 'Global',
+      femaleRatio: 50,
+    },
+    pastBrands: [],
+    packages: [],
+  };
+
+  if (!creatorId) return defaultBlank;
+
   try {
-    const data = localStorage.getItem(PROFILE_KEY);
-    if (!data) {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify(initialCreatorProfile));
-      return initialCreatorProfile;
-    }
+    const data = localStorage.getItem(`madeal_profile_${creatorId}`);
+    if (!data) return defaultBlank;
     return JSON.parse(data);
   } catch {
-    return initialCreatorProfile;
+    return defaultBlank;
   }
 }
 
-export function saveStoredProfile(profile: CreatorProfile): void {
+export function saveStoredProfile(profile: CreatorProfile, creatorId?: string): void {
+  if (!creatorId) return;
   try {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    localStorage.setItem(`madeal_profile_${creatorId}`, JSON.stringify(profile));
   } catch (e) {
     console.error('Failed to save profile', e);
   }

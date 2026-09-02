@@ -3,7 +3,7 @@ import { Deal, CommunicationMessage, CreatorProfile } from '../types';
 import {
   MessageSquare,
   Send,
-  Sparkles,
+  CheckCircle2,
   FileText,
   ChevronRight,
   ChevronLeft,
@@ -320,7 +320,7 @@ export const CommunicationsView: React.FC<CommunicationsViewProps> = ({
                   return (
                     <div key={msg.id} className="flex justify-center my-2">
                       <div className="bg-white border border-[#ECD9CB] rounded-full px-3.5 py-1 text-[11px] font-semibold text-[#7E635F] flex items-center gap-1.5 shadow-payno-sm">
-                        <Sparkles className="w-3 h-3 text-[#59171B]" />
+                        <CheckCircle2 className="w-3 h-3 text-[#59171B]" />
                         <span>{msg.text}</span>
                       </div>
                     </div>

@@ -9,7 +9,6 @@ import {
   Building,
   Link2,
   FileText,
-  Sparkles,
   Check,
 } from 'lucide-react';
 import { generateSecureId } from '../utils/id';

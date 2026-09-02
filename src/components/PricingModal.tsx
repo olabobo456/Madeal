@@ -58,7 +58,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   if (!isOpen) return null;
 
-  const currentPlan: SubscriptionPlan = creator.plan || 'starter';
+  const currentPlan: SubscriptionPlan = creator.plan || 'free';
 
   // Admin Check: Only you (olaitanopeyemi21@gmail.com) or logged in admin can see the configuration drawer
   const isAdmin =

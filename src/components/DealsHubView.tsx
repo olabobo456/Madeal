@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Check,
   Eye,
+  Trash2,
 } from 'lucide-react';
 import { DeliverableTracker } from './DeliverableTracker';
 
@@ -21,6 +22,7 @@ interface DealsHubViewProps {
   onOpenCommunications: (brandName: string) => void;
   onToggleDeliverable: (dealId: string, deliverableId: string, deliveredUrl?: string) => void;
   onOpenBrandPreview?: (deal: Deal) => void;
+  onDeleteDeal?: (dealId: string) => void;
 }
 
 export const DealsHubView: React.FC<DealsHubViewProps> = ({
@@ -30,9 +32,11 @@ export const DealsHubView: React.FC<DealsHubViewProps> = ({
   onOpenCommunications,
   onToggleDeliverable,
   onOpenBrandPreview,
+  onDeleteDeal,
 }) => {
   const [filter, setFilter] = useState<DealStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [deletingDealId, setDeletingDealId] = useState<string | null>(null);
 
   const filteredDeals = deals.filter((deal) => {
     const matchesFilter = filter === 'all' || deal.status === filter;
@@ -286,6 +290,48 @@ export const DealsHubView: React.FC<DealsHubViewProps> = ({
                     <span>{deal.clientSigned ? 'View Deed' : 'Sign & Review'}</span>
                     <ChevronRight className="w-3 h-3" />
                   </button>
+
+                  {onDeleteDeal && (
+                    deletingDealId === deal.id ? (
+                      <div
+                        className="flex items-center gap-1 bg-red-50 p-0.5 rounded-lg border border-red-200"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteDeal(deal.id);
+                          }}
+                          className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingDealId(null);
+                          }}
+                          className="px-1.5 py-0.5 text-[10px] text-stone-600 hover:bg-white rounded"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingDealId(deal.id);
+                        }}
+                        className="p-1.5 text-[#7E635F] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Deal"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
             </div>

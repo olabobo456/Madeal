@@ -168,9 +168,15 @@ export function exportInvoicePDF(deal: Deal, creator: CreatorProfile) {
   doc.setTextColor(35, 11, 13);
 
   if (prefs?.preferredMethod === 'bank_transfer') {
-    doc.text(`Bank Name: ${prefs.bankName || 'Global Bank'}`, 20, y + 13);
+    doc.text(`Bank Name: ${prefs.bankName || 'Bank Transfer'}`, 20, y + 13);
     doc.text(`Account Name: ${prefs.accountName || creator.name}`, 20, y + 18);
-    doc.text(`Account / IBAN: ${prefs.accountNumber || '••••••••4892'}   |   Routing / SWIFT: ${prefs.routingNumber || '121000358'}`, 20, y + 23);
+    const acctInfo = [
+      prefs.accountNumber ? `Account / IBAN: ${prefs.accountNumber}` : '',
+      prefs.routingNumber || prefs.swiftBic ? `Routing / SWIFT: ${prefs.routingNumber || prefs.swiftBic}` : '',
+    ].filter(Boolean).join('   |   ');
+    if (acctInfo) {
+      doc.text(acctInfo, 20, y + 23);
+    }
   } else if (prefs?.preferredMethod === 'payment_link') {
     doc.text(`Direct Payment Link: ${prefs.paymentLink || 'https://buy.stripe.com/creator'}`, 20, y + 15);
   } else if (prefs?.preferredMethod === 'paypal') {

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Info, HelpCircle, X, Sparkles } from 'lucide-react';
+import { Info, HelpCircle, X, BookOpen } from 'lucide-react';
 import { TermExplanation } from '../utils/legalTerms';
 
 interface TermInfoTooltipProps {
@@ -76,7 +76,7 @@ export const TermInfoTooltip: React.FC<TermInfoTooltipProps> = ({
           <div className="flex items-start justify-between gap-2 pb-2 border-b border-[#F5E8DC]">
             <div className="space-y-0.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#FAF3EC] text-[#59171B] text-[10px] font-bold tracking-wide uppercase">
-                <Sparkles className="w-3 h-3 text-[#59171B]" />
+                <BookOpen className="w-3 h-3 text-[#59171B]" />
                 In Plain English
               </span>
               <h4 className="font-heading text-xs font-bold text-[#230B0D] mt-1">

@@ -14,7 +14,6 @@ import {
   DollarSign,
   ShieldCheck,
   FileCheck,
-  Sparkles,
   HelpCircle,
   Info,
   Globe,
@@ -56,16 +55,7 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
 
   // Form State - Step 2: Deliverables
   const [deliverables, setDeliverables] = useState<DeliverableItem[]>(
-    initialDeal?.deliverables || [
-      {
-        id: 'del-init-1',
-        type: 'tiktok',
-        title: 'TikTok Dedicated Video',
-        description: '1x Dedicated Video, 60s max, 1 revision included',
-        baseRate: 1500,
-        quantity: 1,
-      },
-    ]
+    initialDeal?.deliverables || []
   );
 
   // Form State - Step 3: Usage Rights
@@ -141,12 +131,23 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
     setDeliverables([...deliverables, newItem]);
   };
 
+  const handleAddCustomDeliverable = () => {
+    const newItem: DeliverableItem = {
+      id: 'del-' + Date.now() + Math.random().toString(36).substring(2, 5),
+      type: 'custom',
+      title: 'Custom Service / Deliverable',
+      description: 'e.g. Video editing, color grading, thumbnail design, or content deliverable',
+      baseRate: 500,
+      quantity: 1,
+    };
+    setDeliverables([...deliverables, newItem]);
+  };
+
   const handleUpdateDeliverable = (id: string, updates: Partial<DeliverableItem>) => {
     setDeliverables(deliverables.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   };
 
   const handleRemoveDeliverable = (id: string) => {
-    if (deliverables.length === 1) return;
     setDeliverables(deliverables.filter((item) => item.id !== id));
   };
 
@@ -433,13 +434,23 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
 
           {/* Quick Deliverable Presets */}
           <div className="space-y-2">
-            <span className="text-[11px] font-bold text-[#7E635F] uppercase tracking-wider block">
-              Add Content Format
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#7E635F] uppercase tracking-wider block">
+                Add Deliverable / Service Format
+              </span>
+              <button
+                type="button"
+                onClick={handleAddCustomDeliverable}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] text-xs font-bold shadow-payno-sm transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                <span>Add Custom Item</span>
+              </button>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               {deliverablePresets.map((preset) => (
                 <button
-                  key={preset.type}
+                  key={preset.type + preset.title}
                   type="button"
                   onClick={() => handleAddPreset(preset)}
                   className="bg-[#FAF3EC] hover:bg-[#F5E8DC] border border-[#ECD9CB] hover:border-[#59171B]/60 p-3 rounded-2xl text-left transition-all cursor-pointer group shadow-payno-sm"
@@ -459,20 +470,54 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
 
           {/* Deliverables List Table / Items */}
           <div className="space-y-3">
-            <span className="text-[11px] font-bold text-[#7E635F] uppercase tracking-wider block">
-              Selected Deliverable Items ({deliverables.length})
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#7E635F] uppercase tracking-wider block">
+                Selected Deliverable Items ({deliverables.length})
+              </span>
+              {deliverables.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleAddCustomDeliverable}
+                  className="text-xs text-[#59171B] hover:underline font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add another item</span>
+                </button>
+              )}
+            </div>
 
-            {deliverables.map((item, idx) => (
-              <div
-                key={item.id}
-                className="bg-[#FAF3EC] rounded-2xl p-4 border border-[#ECD9CB] space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#59171B]">
-                    Deliverable #{idx + 1}
-                  </span>
-                  {deliverables.length > 1 && (
+            {deliverables.length === 0 ? (
+              <div className="text-center py-10 border-2 border-dashed border-[#ECD9CB] rounded-3xl p-6 bg-[#FAF3EC]/50 space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#59171B]/10 text-[#59171B] flex items-center justify-center mx-auto">
+                  <Plus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-heading text-sm font-bold text-[#230B0D]">
+                    No deliverables added yet
+                  </h4>
+                  <p className="text-xs text-[#7E635F] max-w-sm mx-auto mt-0.5">
+                    Click any format preset above or create a custom service deliverable (e.g. video editing, rate card item, brand post).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddCustomDeliverable}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#59171B] text-[#FED7B8] text-xs font-bold shadow-payno-sm hover:bg-[#451014] transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Add Custom Deliverable</span>
+                </button>
+              </div>
+            ) : (
+              deliverables.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className="bg-[#FAF3EC] rounded-2xl p-4 border border-[#ECD9CB] space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#59171B]">
+                      Deliverable #{idx + 1}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleRemoveDeliverable(item.id)}
@@ -481,71 +526,72 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                  )}
-                </div>
+                  </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                  <div className="sm:col-span-5 space-y-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                    <div className="sm:col-span-5 space-y-1">
+                      <label className="text-[10px] font-bold text-[#7E635F] uppercase">
+                        Title / Service
+                      </label>
+                      <input
+                        type="text"
+                        value={item.title}
+                        onChange={(e) => handleUpdateDeliverable(item.id, { title: e.target.value })}
+                        placeholder="e.g. Video Editing, Dedicated Reel, Rate card item..."
+                        className="w-full bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-3 space-y-1">
+                      <label className="text-[10px] font-bold text-[#7E635F] uppercase">
+                        Rate ({currency})
+                      </label>
+                      <input
+                        type="number"
+                        value={item.baseRate}
+                        onChange={(e) => handleUpdateDeliverable(item.id, { baseRate: Number(e.target.value) })}
+                        className="w-full bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[10px] font-bold text-[#7E635F] uppercase">
+                        Qty
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={item.quantity}
+                        onChange={(e) => handleUpdateDeliverable(item.id, { quantity: Number(e.target.value) })}
+                        className="w-full bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[10px] font-bold text-[#7E635F] uppercase">
+                        Subtotal
+                      </label>
+                      <div className="bg-white border border-[#ECD9CB] rounded-xl px-3 py-2 text-xs text-[#59171B] font-bold">
+                        {formatMoney(item.baseRate * item.quantity, currency)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
                     <label className="text-[10px] font-bold text-[#7E635F] uppercase">
-                      Title
+                      Description & Scope Specifications
                     </label>
                     <input
                       type="text"
-                      value={item.title}
-                      onChange={(e) => handleUpdateDeliverable(item.id, { title: e.target.value })}
+                      value={item.description}
+                      onChange={(e) => handleUpdateDeliverable(item.id, { description: e.target.value })}
+                      placeholder="Specific scope notes, turnaround time, format specs, or deliverables included..."
                       className="w-full bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
                     />
-                  </div>
-
-                  <div className="sm:col-span-3 space-y-1">
-                    <label className="text-[10px] font-bold text-[#7E635F] uppercase">
-                      Rate ($ USD)
-                    </label>
-                    <input
-                      type="number"
-                      value={item.baseRate}
-                      onChange={(e) => handleUpdateDeliverable(item.id, { baseRate: Number(e.target.value) })}
-                      className="w-full bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-[#7E635F] uppercase">
-                      Qty
-                    </label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={item.quantity}
-                      onChange={(e) => handleUpdateDeliverable(item.id, { quantity: Number(e.target.value) })}
-                      className="w-full bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
-                    />
-                  </div>
-
-                  <div className="sm:col-span-2 space-y-1">
-                    <label className="text-[10px] font-bold text-[#7E635F] uppercase">
-                      Subtotal
-                    </label>
-                    <div className="bg-white border border-[#ECD9CB] rounded-xl px-3 py-2 text-xs text-[#59171B] font-bold">
-                      ${(item.baseRate * item.quantity).toLocaleString()}
-                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-[#7E635F] uppercase">
-                    Description & Specifications
-                  </label>
-                  <input
-                    type="text"
-                    value={item.description}
-                    onChange={(e) => handleUpdateDeliverable(item.id, { description: e.target.value })}
-                    placeholder="Specific talking points, framing guidelines, or duration..."
-                    className="w-full bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-[#F5E8DC]">
@@ -712,10 +758,12 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
             <div>
               <span className="font-bold text-[#230B0D] block">Agreement Ready for Dispatch</span>
               <span className="text-[#7E635F]">
-                {formatMoney(totalAmount, currency)} total {taxRate > 0 ? `(incl. ${taxRate}% tax)` : ''} • {deliverables.length} deliverable items • Net 30 terms
+                {formatMoney(totalAmount, currency)} total {taxRate > 0 ? `(incl. ${taxRate}% tax)` : ''} • {deliverables.length} deliverable item{deliverables.length === 1 ? '' : 's'} • Net 30 terms
               </span>
             </div>
-            <span className="text-[#59171B] font-bold">Stripe Connect Ready</span>
+            <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+              Ready to Send
+            </span>
           </div>
 
           <div className="flex items-center justify-between pt-4 border-t border-[#F5E8DC]">

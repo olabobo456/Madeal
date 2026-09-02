@@ -10,6 +10,7 @@ import {
   getProfileFromCloud,
   syncDealToCloud,
   syncProfileToCloud,
+  deleteDealFromCloud,
 } from './lib/cloudStore';
 import {
   getStoredEmailAlerts,
@@ -34,6 +35,8 @@ import { BrandPortalView } from './components/BrandPortalView';
 import { MediaKitView } from './components/MediaKitView';
 import { PricingModal } from './components/PricingModal';
 import { EmailAlertsModal } from './components/EmailAlertsModal';
+import { LandingPageView } from './components/LandingPageView';
+import { AuthView } from './components/AuthView';
 import { ShieldCheck, Clock, RefreshCw, ArrowLeft, ArrowUpRight } from 'lucide-react';
 import { SponsorshipPackage } from './types';
 
@@ -82,9 +85,10 @@ function isMediaKitUrl(): boolean {
 export default function App() {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const [creator, setCreator] = useState<CreatorProfile>(getStoredProfile());
-  const [deals, setDeals] = useState<Deal[]>(getStoredDeals());
+  const [creator, setCreator] = useState<CreatorProfile>(() => getStoredProfile());
+  const [deals, setDeals] = useState<Deal[]>([]);
   const [emailAlerts, setEmailAlerts] = useState<EmailAlertItem[]>(getStoredEmailAlerts());
   const [currentView, setCurrentView] = useState<'dashboard' | 'contract_wizard' | 'contract_sign' | 'deals' | 'invoices' | 'communications' | 'media_kit'>('dashboard');
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
@@ -95,6 +99,8 @@ export default function App() {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [isEmailAlertsModalOpen, setIsEmailAlertsModalOpen] = useState(false);
   const [wizardInitialData, setWizardInitialData] = useState<Partial<Deal> | undefined>(undefined);
+  const [unauthScreen, setUnauthScreen] = useState<'landing' | 'auth'>('landing');
+  const [authInitialMode, setAuthInitialMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
 
   // Standalone Brand Portal & Media Kit Detection
   const [brandPortalDealId, setBrandPortalDealId] = useState<string | null>(() => extractBrandPortalDealId());
@@ -107,6 +113,13 @@ export default function App() {
   // reads/writes their own data. The brand portal & media kit routes
   // below stay public and don't require this.
   useEffect(() => {
+    try {
+      localStorage.removeItem('madeal_deals_v1');
+      localStorage.removeItem('madeal_profile_v1');
+    } catch {
+      // ignore
+    }
+
     const unsubscribe = onAuthChange((user) => {
       setAuthUser(user);
       setAuthLoading(false);
@@ -209,22 +222,33 @@ export default function App() {
   // Initialize and subscribe to Firestore Cloud Sync for Creator Dashboard.
   // Only runs once a creator is signed in — creatorId scopes every read/write.
   useEffect(() => {
-    if (!authUser) return;
+    if (!authUser) {
+      setDeals([]);
+      return;
+    }
     const creatorId = authUser.uid;
 
-    initializeCloudDatabase(creatorId);
+    // Load locally cached creator-scoped deals & profile immediately
+    const cachedDeals = getStoredDeals(creatorId);
+    setDeals(cachedDeals);
+    const cachedProfile = getStoredProfile(creatorId, authUser);
+    setCreator(cachedProfile);
+
+    initializeCloudDatabase(creatorId, {
+      displayName: authUser.displayName,
+      email: authUser.email,
+      photoURL: authUser.photoURL,
+    });
 
     const unsubscribeDeals = subscribeToDeals(creatorId, (cloudDeals) => {
-      if (cloudDeals && cloudDeals.length > 0) {
-        setDeals(cloudDeals);
-        saveStoredDeals(cloudDeals);
-      }
+      setDeals(cloudDeals);
+      saveStoredDeals(cloudDeals, creatorId);
     });
 
     const unsubscribeProfile = subscribeToProfile(creatorId, (cloudProfile) => {
       if (cloudProfile) {
         setCreator(cloudProfile);
-        saveStoredProfile(cloudProfile);
+        saveStoredProfile(cloudProfile, creatorId);
       }
     });
 
@@ -236,12 +260,16 @@ export default function App() {
 
   // Sync to local storage whenever deals, profile, or emailAlerts changes
   useEffect(() => {
-    saveStoredDeals(deals);
-  }, [deals]);
+    if (authUser?.uid) {
+      saveStoredDeals(deals, authUser.uid);
+    }
+  }, [deals, authUser?.uid]);
 
   useEffect(() => {
-    saveStoredProfile(creator);
-  }, [creator]);
+    if (authUser?.uid) {
+      saveStoredProfile(creator, authUser.uid);
+    }
+  }, [creator, authUser?.uid]);
 
   useEffect(() => {
     saveStoredEmailAlerts(emailAlerts);
@@ -330,6 +358,15 @@ export default function App() {
     if (authUser) {
       syncProfileToCloud(updatedProfile, authUser.uid);
     }
+  };
+
+  const handleDeleteDeal = (dealId: string) => {
+    setDeals((prev) => prev.filter((d) => d.id !== dealId));
+    if (selectedDeal?.id === dealId) {
+      setSelectedDeal(null);
+      setCurrentView('deals');
+    }
+    deleteDealFromCloud(dealId);
   };
 
   const handleToggleDeliverable = (dealId: string, deliverableId: string, deliveredUrl?: string) => {
@@ -532,37 +569,29 @@ export default function App() {
   }
 
   if (!authUser) {
+    if (unauthScreen === 'landing') {
+      return (
+        <LandingPageView
+          onGetStarted={() => {
+            setAuthInitialMode('signup');
+            setUnauthScreen('auth');
+          }}
+          onSignIn={() => {
+            setAuthInitialMode('signin');
+            setUnauthScreen('auth');
+          }}
+        />
+      );
+    }
+
     return (
-      <div className="min-h-screen bg-[#FAF3EC] text-[#230B0D] flex flex-col items-center justify-center p-6 text-center">
-        <div className="bg-white p-8 rounded-3xl border border-[#ECD9CB] shadow-payno-md max-w-md w-full space-y-5">
-          <div className="w-12 h-12 rounded-2xl bg-[#59171B] text-[#FED7B8] flex items-center justify-center mx-auto shadow-payno-sm">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="font-heading text-xl font-bold text-[#230B0D]">Sign in to Madeal</h2>
-            <p className="text-xs text-[#7E635F] mt-1.5 leading-relaxed">
-              Your deals, contracts, and invoices are private to your account.
-              Sign in to continue.
-            </p>
-          </div>
-          {authError && (
-            <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg p-2">{authError}</p>
-          )}
-          <button
-            onClick={async () => {
-              setAuthError(null);
-              try {
-                await signInWithGoogle();
-              } catch (e) {
-                setAuthError('Sign-in failed. Please try again.');
-              }
-            }}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#59171B] text-[#FED7B8] text-sm font-bold rounded-xl shadow-payno-sm hover:bg-[#451014] transition-all"
-          >
-            Continue with Google
-          </button>
-        </div>
-      </div>
+      <AuthView
+        initialMode={authInitialMode}
+        onBackToLanding={() => setUnauthScreen('landing')}
+        onSuccess={() => {
+          // onAuthChange will update authUser and seamlessly display dashboard
+        }}
+      />
     );
   }
 
@@ -640,6 +669,7 @@ export default function App() {
               onBack={() => setCurrentView('dashboard')}
               onOpenMessages={() => handleOpenCommunications(selectedDeal.brandName)}
               onOpenBrandPreview={(d) => setBrandPreviewDeal(d)}
+              onDeleteDeal={handleDeleteDeal}
             />
           )}
 
@@ -652,6 +682,7 @@ export default function App() {
               onOpenCommunications={handleOpenCommunications}
               onToggleDeliverable={handleToggleDeliverable}
               onOpenBrandPreview={(d) => setBrandPreviewDeal(d)}
+              onDeleteDeal={handleDeleteDeal}
             />
           )}
 

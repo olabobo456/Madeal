@@ -6,13 +6,13 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase App
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Initialize Firestore with auto long-polling detection to guarantee connectivity in all preview and iframe environments
+// Initialize Firestore with forced long-polling to guarantee immediate connectivity in iframe and sandboxed environments
 let db: Firestore;
 try {
   db = initializeFirestore(
     app,
     {
-      experimentalAutoDetectLongPolling: true,
+      experimentalForceLongPolling: true,
     },
     firebaseConfig.firestoreDatabaseId || '(default)'
   );

@@ -13,7 +13,6 @@ import {
   AlertCircle,
   FileCheck,
   DollarSign,
-  Sparkles,
   ShieldCheck,
 } from 'lucide-react';
 import { buildMailtoUrl, createOverdueReminderAlert } from '../lib/emailAlerts';

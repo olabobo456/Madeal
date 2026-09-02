@@ -9,10 +9,6 @@ import {
   User,
   Plus,
   Trash2,
-  Sparkles,
-  ShieldCheck,
-  CheckCircle2,
-  Lock,
 } from 'lucide-react';
 
 interface ProfileModalProps {
@@ -37,8 +33,13 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   // Basic Info State
   const [name, setName] = useState(creator.name);
   const [handle, setHandle] = useState(creator.handle);
-  const [email, setEmail] = useState(creator.email);
+  const [email, setEmail] = useState(creator.email || '');
   const [niche, setNiche] = useState(creator.niche);
+  const [bio, setBio] = useState(creator.bio || '');
+  const [location, setLocation] = useState(creator.location || '');
+  const [defaultCurrency, setDefaultCurrency] = useState(creator.defaultCurrency || 'USD');
+  const [defaultTaxRate, setDefaultTaxRate] = useState<number>(creator.defaultTaxRate || 0);
+  const [taxId, setTaxId] = useState(creator.taxId || '');
 
   // Dynamic Rate Cards State
   const initialRateCards: RateCardItem[] =
@@ -48,37 +49,37 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           {
             id: 'rate-1',
             platform: 'TikTok',
-            format: 'Dedicated Video',
+            format: '60s Dedicated Video',
             rate: creator.rates?.tiktokVideo || 1500,
-            description: '60s organic video with product showcase',
+            description: 'Full 60s product feature with link-in-bio anchor',
           },
           {
             id: 'rate-2',
             platform: 'Instagram',
-            format: 'Reel & Carousel Post',
+            format: 'Reel + 3x Story Frame',
             rate: creator.rates?.instagramReel || 1200,
-            description: 'In-feed Reel with caption tag & link in bio',
+            description: 'High-production 9:16 vertical video & swipe-up stickers',
           },
           {
             id: 'rate-3',
             platform: 'YouTube',
-            format: 'Sponsored Integration',
+            format: '60s Mid-Roll Integration',
             rate: creator.rates?.youtubeIntegration || 2500,
-            description: '60-90s dedicated segment with link in description',
+            description: 'Dedicated branded segment in long-form video',
           },
           {
             id: 'rate-4',
-            platform: 'Facebook',
-            format: 'Video & Post Integration',
-            rate: 950,
-            description: 'Cross-posted branded video with tracking link',
-          },
-          {
-            id: 'rate-5',
             platform: 'Instagram',
             format: 'Story Set (3 Frames)',
             rate: creator.rates?.storySet || 600,
-            description: '3 sequence story frames with interactive link',
+            description: 'Interactive poll/link story sequence',
+          },
+          {
+            id: 'rate-5',
+            platform: 'UGC Content',
+            format: 'Ad Creative (No Post)',
+            rate: creator.rates?.ugcAsset || 800,
+            description: 'Raw high-res asset for brand paid acquisition channels',
           },
         ];
 
@@ -86,7 +87,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   // New Rate Card Form in Rate Tab
   const [showAddRateForm, setShowAddRateForm] = useState(false);
-  const [newPlatform, setNewPlatform] = useState('Facebook');
+  const [newPlatform, setNewPlatform] = useState('TikTok');
   const [newCustomPlatform, setNewCustomPlatform] = useState('');
   const [newFormat, setNewFormat] = useState('');
   const [newRate, setNewRate] = useState<number>(750);
@@ -121,7 +122,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   if (!isOpen) return null;
 
-  const initials = (name || creator.name)
+  const initials = (creator.name || 'C')
     .split(' ')
     .map((n) => n[0])
     .join('')
@@ -131,9 +132,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const planLabel =
     creator.plan === 'agency'
       ? 'Agency Studio ($19/mo)'
-      : creator.plan === 'free'
-      ? 'Free Starter ($0/mo)'
-      : 'Creator Pro ($7/mo)';
+      : creator.plan === 'starter'
+      ? 'Creator Pro ($7/mo)'
+      : 'Free Plan ($0/mo)';
 
   const handleAddRateCard = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,9 +171,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Map top rates back to traditional rates object for backwards compatibility
     const tiktokCard = rateCards.find((c) => c.platform.toLowerCase().includes('tiktok'));
     const igCard = rateCards.find(
-      (c) => c.platform.toLowerCase().includes('instagram') && !c.format.toLowerCase().includes('story')
+      (c) =>
+        c.platform.toLowerCase().includes('instagram') &&
+        !c.format.toLowerCase().includes('story')
     );
     const ytCard = rateCards.find((c) => c.platform.toLowerCase().includes('youtube'));
     const storyCard = rateCards.find((c) => c.format.toLowerCase().includes('story'));
@@ -182,10 +186,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
     const updatedProfile: CreatorProfile = {
       ...creator,
-      name: name.trim() || creator.name,
-      handle: handle.trim() || creator.handle,
-      email: email.trim() || creator.email,
-      niche: niche.trim() || creator.niche,
+      name,
+      handle,
+      email,
+      niche,
+      bio,
+      location,
+      defaultCurrency,
+      defaultTaxRate: Number(defaultTaxRate) || 0,
+      taxId,
       rateCards,
       rates: {
         tiktokVideo: tiktokCard ? tiktokCard.rate : creator.rates?.tiktokVideo || 1500,
@@ -196,14 +205,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
       },
       paymentPreferences: {
         preferredMethod,
-        paymentLink: paymentLink.trim(),
-        bankName: bankName.trim(),
-        accountName: accountName.trim(),
-        accountNumber: accountNumber.trim(),
-        routingNumber: routingNumber.trim(),
-        swiftBic: swiftBic.trim(),
-        paypalEmail: paypalEmail.trim(),
-        customInstructions: customInstructions.trim(),
+        paymentLink,
+        bankName,
+        accountName,
+        accountNumber,
+        routingNumber,
+        swiftBic,
+        paypalEmail,
+        customInstructions,
       },
     };
 
@@ -213,21 +222,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-3xl p-5 sm:p-7 max-w-xl w-full border border-[#ECD9CB] shadow-payno-lg space-y-4 text-[#230B0D] animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-3xl p-5 sm:p-7 max-w-lg w-full border border-[#ECD9CB] shadow-payno-lg space-y-5 text-[#230B0D] animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#F5E8DC] pb-3.5 shrink-0">
+        <div className="flex items-center justify-between border-b border-[#F5E8DC] pb-4 shrink-0">
           <div className="flex items-center gap-3">
-            {/* Typographic Monogram Avatar */}
-            <div className="w-11 h-11 rounded-2xl bg-[#59171B] text-[#FED7B8] font-heading font-bold text-base flex items-center justify-center shadow-payno-sm border-2 border-white">
+            {/* Monogram Avatar */}
+            <div className="w-12 h-12 rounded-2xl bg-[#59171B] text-[#FED7B8] font-heading font-bold text-lg flex items-center justify-center shadow-payno-sm border-2 border-white">
               {initials}
             </div>
             <div>
-              <h3 className="font-heading text-lg sm:text-xl font-bold text-[#230B0D]">
-                Creator Settings
-              </h3>
-              <p className="text-xs text-[#7E635F]">
-                Manage rate cards, platform prices & invoice payout details
-              </p>
+              <h3 className="font-heading text-xl font-bold text-[#230B0D]">Creator Profile</h3>
+              <p className="text-xs text-[#7E635F]">Manage identity, rates, & payment accounts</p>
             </div>
           </div>
           <button
@@ -250,7 +255,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             }`}
           >
             <User className="w-3.5 h-3.5" />
-            <span>Profile & Plan</span>
+            <span>Profile</span>
           </button>
           <button
             type="button"
@@ -262,7 +267,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             }`}
           >
             <DollarSign className="w-3.5 h-3.5" />
-            <span>Rate Cards ({rateCards.length})</span>
+            <span>Rates ({rateCards.length})</span>
           </button>
           <button
             type="button"
@@ -274,20 +279,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             }`}
           >
             <Building className="w-3.5 h-3.5" />
-            <span>Payout Options</span>
+            <span>Payout Details</span>
           </button>
         </div>
 
         {/* Scrollable Form Body */}
         <div className="overflow-y-auto pr-1 flex-1 space-y-4">
-          {/* TAB 1: Profile & Plan */}
+          {/* TAB 1: Profile & Identity */}
           {activeTab === 'profile' && (
-            <div className="space-y-3.5 animate-in fade-in duration-100">
+            <div className="space-y-4 animate-in fade-in duration-100">
               {/* Membership Plan Banner */}
               <div className="p-3.5 rounded-2xl bg-[#FAF3EC] border border-[#ECD9CB] flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-[#59171B] text-[#FED7B8] flex items-center justify-center shadow-payno-sm">
-                    <Sparkles className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-xl bg-[#59171B] text-[#FED7B8] flex items-center justify-center">
+                    <Building className="w-4 h-4" />
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-[#7E635F] uppercase tracking-wider block">
@@ -306,88 +311,154 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     }}
                     className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#F5E8DC] border border-[#ECD9CB] text-xs font-bold text-[#59171B] shadow-payno-sm transition-colors cursor-pointer"
                   >
-                    Change Plan
+                    Upgrade / Manage
                   </button>
                 )}
               </div>
 
-              {onSignOut && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onSignOut();
-                  }}
-                  className="w-full text-center px-3 py-2 rounded-xl bg-white hover:bg-[#F5E8DC] border border-[#ECD9CB] text-xs font-bold text-[#7E635F] shadow-payno-sm transition-colors cursor-pointer"
-                >
-                  Sign out
-                </button>
-              )}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                      Creator / Business Name
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
+                    />
+                  </div>
 
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                  Full Name / Legal Entity Name
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Sarah Jenkins Creative Studio"
-                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3.5 py-2 text-xs text-[#230B0D] font-medium outline-none"
-                />
-              </div>
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                      Social Handle
+                    </label>
+                    <input
+                      type="text"
+                      value={handle}
+                      onChange={(e) => setHandle(e.target.value)}
+                      placeholder="@username"
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
+                    />
+                  </div>
+                </div>
 
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                  Public Social Handle
-                </label>
-                <input
-                  type="text"
-                  value={handle}
-                  onChange={(e) => setHandle(e.target.value)}
-                  placeholder="e.g. @sarahcreates"
-                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3.5 py-2 text-xs text-[#230B0D] font-medium outline-none"
-                />
-              </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                    Contact & Invoicing Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="creator@business.com"
+                    className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
+                  />
+                </div>
 
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                  Contact / Invoicing Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. contact@sarahcreates.com"
-                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3.5 py-2 text-xs text-[#230B0D] font-medium outline-none"
-                />
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                      Primary Niche
+                    </label>
+                    <input
+                      type="text"
+                      value={niche}
+                      onChange={(e) => setNiche(e.target.value)}
+                      placeholder="Tech, Fashion, Gaming..."
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
+                    />
+                  </div>
 
-              <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                  Creator Niche / Focus
-                </label>
-                <input
-                  type="text"
-                  value={niche}
-                  onChange={(e) => setNiche(e.target.value)}
-                  placeholder="e.g. Beauty, Lifestyle, Tech & Wellness"
-                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3.5 py-2 text-xs text-[#230B0D] font-medium outline-none"
-                />
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                      Location / Region
+                    </label>
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g. Los Angeles, CA"
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                    Bio / Pitch Statement
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Short bio for your public media kit..."
+                    className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none resize-none"
+                  />
+                </div>
+
+                {/* Currency & Tax Defaults */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
+                      Default Currency
+                    </label>
+                    <select
+                      value={defaultCurrency}
+                      onChange={(e) => setDefaultCurrency(e.target.value)}
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-3 py-2.5 text-xs text-[#230B0D] font-semibold outline-none cursor-pointer"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="EUR">EUR (€)</option>
+                      <option value="GBP">GBP (£)</option>
+                      <option value="CAD">CAD (CA$)</option>
+                      <option value="AUD">AUD (AU$)</option>
+                      <option value="NGN">NGN (₦)</option>
+                      <option value="ZAR">ZAR (R)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
+                      Tax Rate (%)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={defaultTaxRate}
+                      onChange={(e) => setDefaultTaxRate(Number(e.target.value))}
+                      placeholder="0"
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-3.5 py-2.5 text-xs text-[#230B0D] outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
+                      Tax ID / VAT (Opt)
+                    </label>
+                    <input
+                      type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
+                      placeholder="VAT Number"
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-3.5 py-2.5 text-xs text-[#230B0D] outline-none"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {/* TAB 2: Dynamic Rate Cards & Platforms */}
           {activeTab === 'rates' && (
-            <div className="space-y-3.5 animate-in fade-in duration-100">
+            <div className="space-y-4 animate-in fade-in duration-100">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold text-[#230B0D] flex items-center gap-1.5">
-                    <span>Platform Deliverable Rates</span>
-                  </h4>
+                  <h4 className="text-xs font-bold text-[#230B0D]">Platform Deliverable Rates</h4>
                   <p className="text-[11px] text-[#7E635F]">
-                    Define default sponsor pricing per platform format.
+                    Define default sponsor pricing per deliverable format.
                   </p>
                 </div>
                 {!showAddRateForm && (
@@ -404,7 +475,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
               {/* Add New Rate Card Form */}
               {showAddRateForm && (
-                <div className="bg-[#FAF3EC] p-3.5 rounded-2xl border border-[#ECD9CB] space-y-3 animate-in fade-in duration-150">
+                <div className="bg-[#FAF3EC] p-4 rounded-2xl border border-[#ECD9CB] space-y-3 animate-in fade-in duration-150">
                   <div className="flex items-center justify-between border-b border-[#ECD9CB] pb-2">
                     <span className="text-xs font-bold text-[#59171B] flex items-center gap-1">
                       <Plus className="w-3.5 h-3.5" />
@@ -419,7 +490,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
                         Platform *
@@ -436,6 +507,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         <option value="Twitter / X">Twitter / X</option>
                         <option value="LinkedIn">LinkedIn</option>
                         <option value="UGC Content">UGC Ad Package</option>
+                        <option value="Podcast">Podcast Shoutout</option>
+                        <option value="Newsletter">Newsletter Feature</option>
                         <option value="Other">Other / Custom</option>
                       </select>
                     </div>
@@ -455,10 +528,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                        Rate ($ USD)
+                        Rate ({defaultCurrency})
                       </label>
                       <input
                         type="number"
@@ -503,11 +576,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               )}
 
               {/* Rate Cards List */}
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {rateCards.map((card) => (
                   <div
                     key={card.id}
-                    className="bg-[#FAF3EC] p-3 rounded-2xl border border-[#ECD9CB] flex items-center justify-between gap-3 group"
+                    className="bg-[#FAF3EC] p-3.5 rounded-2xl border border-[#ECD9CB] flex items-center justify-between gap-3 group"
                   >
                     <div className="space-y-0.5 flex-1">
                       <div className="flex items-center gap-2">
@@ -525,26 +598,25 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
-                        <span className="text-xs font-bold text-[#7E635F]">$</span>
+                        <span className="text-xs font-bold text-[#7E635F]">{defaultCurrency}</span>
                         <input
                           type="number"
                           value={card.rate}
                           onChange={(e) =>
                             handleUpdateRateCardPrice(card.id, Number(e.target.value))
                           }
-                          className="w-20 bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-2 py-1 text-xs font-mono font-bold text-[#230B0D] outline-none"
+                          className="w-20 bg-white border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold text-[#230B0D] outline-none"
                         />
                       </div>
 
-                      {rateCards.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRateCard(card.id)}
-                          className="p-1.5 text-[#7E635F] hover:text-[#B82C3A] rounded-lg transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRateCard(card.id)}
+                        className="p-1.5 text-[#7E635F] hover:text-[#B82C3A] rounded-lg transition-colors cursor-pointer"
+                        title="Remove rate card"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -554,10 +626,10 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           {/* TAB 3: Invoice Payment Preferences & Instructions */}
           {activeTab === 'payments' && (
-            <div className="space-y-3.5 animate-in fade-in duration-100">
+            <div className="space-y-4 animate-in fade-in duration-100">
               <div className="bg-[#FAF3EC] p-3.5 rounded-2xl border border-[#ECD9CB] text-xs space-y-1">
                 <div className="flex items-center gap-1.5 font-bold text-[#59171B]">
-                  <Lock className="w-3.5 h-3.5" />
+                  <Building className="w-4 h-4" />
                   <span>Invoice Remittance Routing</span>
                 </div>
                 <p className="text-[11px] text-[#7E635F]">
@@ -567,7 +639,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
               {/* Preferred Method Selector */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
+                <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
                   Payment Remittance Method
                 </label>
                 <select
@@ -577,7 +649,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       e.target.value as 'payment_link' | 'bank_transfer' | 'wise' | 'paypal' | 'custom'
                     )
                   }
-                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] font-semibold outline-none cursor-pointer"
+                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] font-semibold outline-none cursor-pointer"
                 >
                   <option value="bank_transfer">Direct Bank Wire / ACH Transfer</option>
                   <option value="payment_link">Payment Link (Stripe Payment Link, Wise)</option>
@@ -589,17 +661,17 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {/* Payment Link Input */}
               {(preferredMethod === 'payment_link' || preferredMethod === 'wise') && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
                     Payment URL Link
                   </label>
                   <div className="relative">
-                    <Link2 className="w-3.5 h-3.5 absolute left-3 top-2.5 text-[#7E635F]" />
+                    <Link2 className="w-4 h-4 absolute left-3.5 top-3 text-[#7E635F]" />
                     <input
                       type="url"
                       value={paymentLink}
                       onChange={(e) => setPaymentLink(e.target.value)}
                       placeholder="https://buy.stripe.com/..."
-                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl pl-8 pr-3 py-2 text-xs text-[#230B0D] outline-none"
+                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl pl-10 pr-4 py-2.5 text-xs text-[#230B0D] outline-none"
                     />
                   </div>
                 </div>
@@ -607,60 +679,64 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
               {/* Bank Details Inputs */}
               {(preferredMethod === 'bank_transfer' || preferredMethod === 'custom') && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                      Bank Name
-                    </label>
-                    <input
-                      type="text"
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                      placeholder="e.g. Standard Chartered Bank"
-                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
-                    />
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                        Bank Name
+                      </label>
+                      <input
+                        type="text"
+                        value={bankName}
+                        onChange={(e) => setBankName(e.target.value)}
+                        placeholder="e.g. Chase, Standard Chartered, Barclays"
+                        className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                        Beneficiary Account Name
+                      </label>
+                      <input
+                        type="text"
+                        value={accountName}
+                        onChange={(e) => setAccountName(e.target.value)}
+                        placeholder="e.g. Sarah Jenkins Studio"
+                        className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                      Beneficiary Account Name
-                    </label>
-                    <input
-                      type="text"
-                      value={accountName}
-                      onChange={(e) => setAccountName(e.target.value)}
-                      placeholder="e.g. Sarah Jenkins Studio"
-                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
-                    />
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                        Account Number / IBAN
+                      </label>
+                      <input
+                        type="text"
+                        value={accountNumber}
+                        onChange={(e) => setAccountNumber(e.target.value)}
+                        placeholder="••••••••4892"
+                        className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] font-mono outline-none"
+                      />
+                    </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                      Account / IBAN
-                    </label>
-                    <input
-                      type="text"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                      placeholder="••••••••4892"
-                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] font-mono outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
-                      Routing / SWIFT
-                    </label>
-                    <input
-                      type="text"
-                      value={routingNumber || swiftBic}
-                      onChange={(e) => {
-                        setRoutingNumber(e.target.value);
-                        setSwiftBic(e.target.value);
-                      }}
-                      placeholder="121000358"
-                      className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] font-mono outline-none"
-                    />
+                    <div className="space-y-1">
+                      <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
+                        Routing / SWIFT / Sort Code
+                      </label>
+                      <input
+                        type="text"
+                        value={routingNumber || swiftBic}
+                        onChange={(e) => {
+                          setRoutingNumber(e.target.value);
+                          setSwiftBic(e.target.value);
+                        }}
+                        placeholder="121000358"
+                        className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] font-mono outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -668,7 +744,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               {/* PayPal */}
               {preferredMethod === 'paypal' && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
+                  <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
                     PayPal Address
                   </label>
                   <input
@@ -676,14 +752,14 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                     value={paypalEmail}
                     onChange={(e) => setPaypalEmail(e.target.value)}
                     placeholder="payments@sarahcreates.com"
-                    className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none"
+                    className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none"
                   />
                 </div>
               )}
 
               {/* Custom Instructions */}
               <div className="space-y-1">
-                <label className="block text-[10px] font-bold text-[#7E635F] uppercase tracking-wider">
+                <label className="block text-xs font-bold text-[#7E635F] uppercase tracking-wider">
                   Remittance Notes on Invoices
                 </label>
                 <textarea
@@ -691,7 +767,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                   value={customInstructions}
                   onChange={(e) => setCustomInstructions(e.target.value)}
                   placeholder="e.g. Quote invoice number on bank transfer. Settlement terms: 30 days."
-                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3 py-2 text-xs text-[#230B0D] outline-none resize-none"
+                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-2xl px-4 py-2.5 text-xs text-[#230B0D] outline-none resize-none"
                 />
               </div>
             </div>
@@ -700,20 +776,32 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
         {/* Bottom Action Buttons */}
         <div className="flex items-center gap-3 pt-3 border-t border-[#F5E8DC] shrink-0">
+          {onSignOut && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onSignOut();
+              }}
+              className="py-2.5 px-4 border border-[#ECD9CB] text-rose-700 hover:bg-rose-50 rounded-2xl text-xs font-semibold transition-colors cursor-pointer"
+            >
+              Sign Out
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 py-2 px-4 border border-[#ECD9CB] text-[#7E635F] hover:text-[#230B0D] rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+            className="flex-1 py-2.5 px-4 border border-[#ECD9CB] text-[#7E635F] hover:text-[#230B0D] rounded-2xl text-xs font-semibold transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="flex-1 py-2 px-4 bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-payno-sm flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 px-4 bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] rounded-2xl text-xs font-bold transition-colors cursor-pointer shadow-payno-sm flex items-center justify-center gap-1.5"
           >
-            <Check className="w-3.5 h-3.5 stroke-[3]" />
-            <span>Save Changes</span>
+            <Check className="w-4 h-4 stroke-[3]" />
+            <span>Save Profile</span>
           </button>
         </div>
       </div>

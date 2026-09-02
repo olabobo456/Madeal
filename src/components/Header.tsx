@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="text-left">
               <span className="text-[11px] font-medium text-[#7E635F] block">
-                Welcome Back 👋
+                Welcome 👋
               </span>
               <h2 className="font-heading text-sm sm:text-base font-bold text-[#230B0D] tracking-tight group-hover:text-[#59171B] transition-colors leading-tight">
                 {creator.name}

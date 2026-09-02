@@ -12,8 +12,7 @@ import {
   Clock,
   AlertTriangle,
   FileCheck,
-  ExternalLink,
-  Sparkles
+  ExternalLink
 } from 'lucide-react';
 
 interface InvoiceReminderModalProps {

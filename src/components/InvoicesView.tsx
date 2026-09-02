@@ -13,7 +13,6 @@ import {
   Copy,
   Check,
   ExternalLink,
-  Sparkles,
   Eye,
   BellRing,
   Download,
@@ -136,9 +135,13 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               {payPref.preferredMethod === 'payment_link' && payPref.paymentLink
                 ? `Custom Payment Link (${payPref.paymentLink})`
                 : payPref.preferredMethod === 'bank_transfer'
-                ? `Direct Bank Transfer (${payPref.bankName || 'JPMorgan Chase / SVB'} • ${payPref.accountNumber || '••••4892'})`
+                ? payPref.bankName || payPref.accountNumber
+                  ? `Direct Bank Transfer (${payPref.bankName || 'Bank'}${payPref.accountNumber ? ` • ${payPref.accountNumber}` : ''})`
+                  : 'Direct Bank Transfer (Add account in Payout Details)'
                 : payPref.preferredMethod === 'paypal'
                 ? `PayPal Remittance (${payPref.paypalEmail || creator.email})`
+                : payPref.customInstructions
+                ? 'Custom Remittance Instructions'
                 : 'Direct Bank Wire / ACH Transfer'}
             </p>
             <p className="text-[11px] text-[#7E635F]">

@@ -2,8 +2,8 @@ import {
   collection,
   doc,
   getDoc,
-  getDocs,
   setDoc,
+  deleteDoc,
   onSnapshot,
   serverTimestamp,
   query,
@@ -11,42 +11,87 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Deal, CreatorProfile } from '../types';
-import { initialDeals, initialCreatorProfile } from '../data/mockData';
 
 const DEALS_COLLECTION = 'deals';
 const CREATORS_COLLECTION = 'creators';
 
-/**
- * Initializes Firestore with seed demo data for a freshly signed-in
- * creator who has no deals yet. Scoped to creatorId so we never touch
- * or overwrite another creator's data.
- */
-export async function initializeCloudDatabase(creatorId: string): Promise<void> {
+function buildBlankProfile(
+  creatorId: string,
+  displayName: string | null,
+  email: string | null,
+  photoURL: string | null
+): CreatorProfile {
+  return {
+    name: displayName || 'Creator',
+    handle: (displayName || 'creator').toLowerCase().replace(/[^a-z0-9]/g, '') || 'creator',
+    email: email || '',
+    avatarUrl: photoURL || undefined,
+    bio: '',
+    location: '',
+    niche: 'Content Creator',
+    totalEarnings: 0,
+    monthlyGrowthPercent: 0,
+    defaultCurrency: 'USD',
+    defaultTaxRate: 0,
+    plan: 'free',
+    emailAlerts: {
+      onCountersign: true,
+      onPaymentReceived: true,
+      onDeliverableSubmitted: true,
+      onOverdueReminder: true,
+      notificationEmail: email || '',
+    },
+    audienceStats: {
+      totalFollowers: '0',
+      avgEngagementRate: '0%',
+      monthlyImpressions: '0',
+      topDemographic: 'General Audience',
+      topCountry: 'Global',
+      femaleRatio: 50,
+    },
+    pastBrands: [],
+    packages: [],
+    rateCards: [],
+  } as CreatorProfile;
+}
+
+export async function initializeCloudDatabase(
+  creatorId: string,
+  account?: { displayName: string | null; email: string | null; photoURL: string | null }
+): Promise<void> {
   try {
-    const mine = query(collection(db, DEALS_COLLECTION), where('creatorId', '==', creatorId));
-    const dealsSnapshot = await getDocs(mine);
-    if (dealsSnapshot.empty) {
-      await setDoc(doc(db, CREATORS_COLLECTION, creatorId), {
-        ...initialCreatorProfile,
+    const profileRef = doc(db, CREATORS_COLLECTION, creatorId);
+    const existing = await getDoc(profileRef);
+    if (!existing.exists()) {
+      await setDoc(profileRef, {
+        ...buildBlankProfile(
+          creatorId,
+          account?.displayName ?? null,
+          account?.email ?? null,
+          account?.photoURL ?? null
+        ),
         creatorId,
       });
-
-      for (const deal of initialDeals) {
-        await setDoc(doc(db, DEALS_COLLECTION, deal.id), { ...deal, creatorId });
+    } else {
+      const data = existing.data() as CreatorProfile;
+      // If legacy profile seeded mock Sarah Jenkins, clean it up with user's real profile
+      if (data.name === 'Sarah Jenkins' || data.handle === '@sarahcreates' || data.handle === 'sarahcreates') {
+        await setDoc(profileRef, {
+          ...buildBlankProfile(
+            creatorId,
+            account?.displayName ?? null,
+            account?.email ?? null,
+            account?.photoURL ?? null
+          ),
+          creatorId,
+        });
       }
     }
   } catch (error) {
-    // Non-blocking offline fallback
     console.info('Firestore cloud synchronization operating in offline-first mode.');
   }
 }
 
-/**
- * Subscribes to real-time deals collection changes, scoped to the
- * signed-in creator. Firestore security rules enforce this filter
- * server-side too (see firestore.rules) — a query for a different
- * creator's deals will be rejected outright, not silently filtered.
- */
 export function subscribeToDeals(
   creatorId: string,
   onUpdate: (deals: Deal[]) => void,
@@ -58,14 +103,24 @@ export function subscribeToDeals(
       dealsRef,
       { includeMetadataChanges: false },
       (snapshot) => {
-        if (!snapshot.empty) {
-          const loadedDeals: Deal[] = [];
-          snapshot.forEach((docSnap) => {
-            loadedDeals.push(docSnap.data() as Deal);
-          });
-          loadedDeals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          onUpdate(loadedDeals);
-        }
+        const loadedDeals: Deal[] = [];
+        snapshot.forEach((docSnap) => {
+          const dealData = docSnap.data() as Deal;
+          // Filter out legacy mock data if it was previously saved
+          if (
+            dealData.creatorHandle === '@sarahcreates' ||
+            dealData.brandName === 'Lumina Skincare' ||
+            dealData.brandName === 'Apex Performance' ||
+            dealData.brandName === 'NordVPN' ||
+            dealData.brandName === 'Bloom Nutrition'
+          ) {
+            deleteDealFromCloud(dealData.id);
+            return;
+          }
+          loadedDeals.push(dealData);
+        });
+        loadedDeals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        onUpdate(loadedDeals);
       },
       (error) => {
         if (onError) onError(error);
@@ -76,11 +131,15 @@ export function subscribeToDeals(
   }
 }
 
-/**
- * Subscribes to a single deal by ID in real-time (used by the Brand
- * Countersign Portal). Deal IDs are unguessable tokens, so this stays
- * an open `get` — see firestore.rules.
- */
+export async function deleteDealFromCloud(dealId: string): Promise<void> {
+  try {
+    const dealRef = doc(db, DEALS_COLLECTION, dealId);
+    await deleteDoc(dealRef);
+  } catch (error) {
+    console.warn('Could not delete deal from cloud:', error);
+  }
+}
+
 export function subscribeToSingleDeal(
   dealId: string,
   onUpdate: (deal: Deal | null) => void,
@@ -106,9 +165,6 @@ export function subscribeToSingleDeal(
   }
 }
 
-/**
- * Fetches a single deal directly from Firestore
- */
 export async function getDealFromCloud(dealId: string): Promise<Deal | null> {
   try {
     const dealRef = doc(db, DEALS_COLLECTION, dealId);
@@ -122,9 +178,6 @@ export async function getDealFromCloud(dealId: string): Promise<Deal | null> {
   return null;
 }
 
-/**
- * Subscribes to Creator profile updates in real time
- */
 export function subscribeToProfile(
   creatorId: string,
   onUpdate: (profile: CreatorProfile) => void
@@ -139,18 +192,13 @@ export function subscribeToProfile(
           onUpdate(docSnap.data() as CreatorProfile);
         }
       },
-      () => {
-        // Silently preserve current local state when offline
-      }
+      () => {}
     );
   } catch (e) {
     return () => {};
   }
 }
 
-/**
- * Fetches creator profile from cloud
- */
 export async function getProfileFromCloud(creatorId: string): Promise<CreatorProfile | null> {
   try {
     const profileRef = doc(db, CREATORS_COLLECTION, creatorId);
@@ -164,12 +212,6 @@ export async function getProfileFromCloud(creatorId: string): Promise<CreatorPro
   return null;
 }
 
-/**
- * Saves or updates a deal in Firestore and records an immutable audit
- * log entry when the brand countersigns. `deal.creatorId` must already
- * be set (ContractWizard stamps it at creation) — security rules will
- * reject the write otherwise.
- */
 export async function syncDealToCloud(deal: Deal): Promise<void> {
   try {
     const dealRef = doc(db, DEALS_COLLECTION, deal.id);
@@ -190,14 +232,10 @@ export async function syncDealToCloud(deal: Deal): Promise<void> {
       });
     }
   } catch (error) {
-    // Local persistence will keep the deal intact
     console.info('Synced deal locally, pending cloud connection.');
   }
 }
 
-/**
- * Saves updated creator profile to Firestore
- */
 export async function syncProfileToCloud(
   profile: CreatorProfile,
   creatorId: string
@@ -206,14 +244,10 @@ export async function syncProfileToCloud(
     const profileRef = doc(db, CREATORS_COLLECTION, creatorId);
     await setDoc(profileRef, profile, { merge: true });
   } catch (error) {
-    // Local persistence will keep profile intact
     console.info('Synced profile locally, pending cloud connection.');
   }
 }
 
-/**
- * Generates a universally compatible Brand Portal signing URL that works across any browser/device
- */
 export function getBrandPortalUrl(dealId: string): string {
   let origin = window.location.origin;
   if (origin.includes('ais-dev-')) {

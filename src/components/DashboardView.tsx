@@ -14,7 +14,6 @@ import {
   Briefcase,
   ArrowUpRight,
   Send,
-  Sparkles,
   Wallet,
   Globe,
   Share2,

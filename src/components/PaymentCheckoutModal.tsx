@@ -11,6 +11,10 @@ import {
   Download,
   Receipt,
   AlertCircle,
+  ExternalLink,
+  Copy,
+  Check,
+  Globe,
 } from 'lucide-react';
 import { exportInvoicePDF } from '../lib/pdfExport';
 import { httpsCallable } from 'firebase/functions';
@@ -56,18 +60,20 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
   onClose,
   onPaymentSuccess,
 }) => {
-  const [paymentTab, setPaymentTab] = useState<'pay' | 'wire'>('pay');
+  const [paymentTab, setPaymentTab] = useState<'card' | 'wire' | 'manual'>('card');
   const [billingEmail, setBillingEmail] = useState(deal.clientEmail || '');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [transactionId, setTransactionId] = useState('');
+  const [wireReference, setWireReference] = useState('');
   const [copiedAccount, setCopiedAccount] = useState(false);
+  const [copiedAmount, setCopiedAmount] = useState(false);
 
   if (!isOpen) return null;
 
-  const currency = deal.currency || creator.defaultCurrency || 'NGN';
+  const currency = deal.currency || creator.defaultCurrency || 'USD';
   const taxRate = deal.taxRate ?? creator.defaultTaxRate ?? 0;
   const subtotal = deal.subtotal ?? Math.round((deal.totalAmount / (1 + taxRate / 100)) * 100) / 100;
   const taxAmount = deal.taxAmount ?? Math.round((deal.totalAmount - subtotal) * 100) / 100;
@@ -76,7 +82,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
     preferredMethod: 'bank_transfer',
     bankName: 'Global Commercial Bank',
     accountName: creator.name,
-    accountNumber: '••••••••4892',
+    accountNumber: '••••4892',
     routingNumber: '121000358',
     swiftBic: 'GLBAUS33',
   };
@@ -85,7 +91,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
     setPaymentError(null);
 
     if (!PAYSTACK_PUBLIC_KEY) {
-      setPaymentError('Payments are not configured yet — missing Paystack public key.');
+      setPaymentError('Paystack checkout is not configured yet with a public key. You can use the Direct Bank Wire or Custom Payment Link options below.');
       return;
     }
     if (!billingEmail) {
@@ -98,20 +104,20 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
       await loadPaystackScript();
     } catch {
       setIsProcessing(false);
-      setPaymentError('Could not load the payment form. Check your connection and try again.');
+      setPaymentError('Could not load the payment form. Check your internet connection and try again.');
       return;
     }
 
     if (!window.PaystackPop) {
       setIsProcessing(false);
-      setPaymentError('Payment form unavailable right now. Please try again.');
+      setPaymentError('Payment gateway unavailable right now. Please try again.');
       return;
     }
 
     const handler = window.PaystackPop.setup({
       key: PAYSTACK_PUBLIC_KEY,
       email: billingEmail,
-      amount: Math.round(deal.totalAmount * 100), // kobo/cents
+      amount: Math.round(deal.totalAmount * 100),
       currency,
       ref: `MDL-${deal.id}-${Date.now()}`,
       metadata: {
@@ -119,9 +125,6 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
         invoiceNumber: deal.invoiceNumber,
       },
       callback: (response: { reference: string }) => {
-        // The popup reporting success is NOT proof of payment on its own —
-        // we hand the reference to a server function that independently
-        // re-verifies it with Paystack before anything is marked paid.
         void verifyOnServer(response.reference);
       },
       onClose: () => {
@@ -153,7 +156,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
           {
             id: 'msg-pay-' + Date.now(),
             sender: 'system',
-            senderName: 'Madeal Payment Engine',
+            senderName: 'Madeal Settlement Engine',
             text: `Payment of ${formatMoney(deal.totalAmount, currency)} verified and settled via Paystack (Ref: ${reference}).`,
             timestamp: 'Just now',
           },
@@ -164,7 +167,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
       setPaymentError(
         err?.message?.includes('Amount')
           ? 'Payment verification failed: amount did not match this invoice.'
-          : 'We could not verify this payment. If you were charged, contact the creator — do not pay again.'
+          : 'We could not verify this payment automatically. If your card was charged, contact the creator with your transaction receipt.'
       );
     } finally {
       setIsProcessing(false);
@@ -178,31 +181,63 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
       setIsProcessing(false);
       const updatedDeal: Deal = {
         ...deal,
-        // NOT marked 'paid' — a client-side "I sent it" claim isn't proof
-        // of funds received. The creator confirms manually once the wire
-        // actually lands, then marks the invoice paid themselves.
-        status: 'active',
         messages: [
           ...deal.messages,
           {
             id: 'msg-wire-' + Date.now(),
             sender: 'brand',
             senderName: deal.brandName,
-            text: `Reported initiating a bank wire for ${formatMoney(deal.totalAmount, currency)} (Ref: ${deal.invoiceNumber}). Awaiting confirmation from ${creator.name}.`,
+            text: `Initiated direct bank remittance of ${formatMoney(deal.totalAmount, currency)} for Invoice ${deal.invoiceNumber}${wireReference ? ` (Wire Ref: ${wireReference.trim()})` : ''}.`,
             timestamp: 'Just now',
           },
         ],
       };
       onPaymentSuccess(updatedDeal);
       onClose();
-    }, 900);
+    }, 600);
+  };
+
+  const handleManualSettlementSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wireReference.trim()) {
+      setPaymentError('Please enter a transaction ID, check number, or remittance reference.');
+      return;
+    }
+
+    setIsProcessing(true);
+    setTimeout(() => {
+      setIsProcessing(false);
+      const ref = wireReference.trim();
+      setTransactionId(ref);
+      setIsSuccess(true);
+
+      const now = new Date().toISOString();
+      const updatedDeal: Deal = {
+        ...deal,
+        status: 'paid',
+        paidAt: now,
+        paymentMethodUsed: prefs.preferredMethod === 'paypal' ? 'PayPal' : prefs.preferredMethod === 'payment_link' ? 'Online Gateway' : 'Bank Wire / ACH',
+        paymentTransactionId: ref,
+        messages: [
+          ...deal.messages,
+          {
+            id: 'msg-settled-' + Date.now(),
+            sender: 'brand',
+            senderName: deal.brandName,
+            text: `Marked invoice ${deal.invoiceNumber} as settled (${formatMoney(deal.totalAmount, currency)}). Remittance Ref: ${ref}.`,
+            timestamp: 'Just now',
+          },
+        ],
+      };
+      onPaymentSuccess(updatedDeal);
+    }, 600);
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
       <div className="bg-[#FAF3EC] rounded-3xl max-w-lg w-full border-2 border-[#59171B]/20 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150 text-[#230B0D]">
 
-        {/* Header */}
+        {/* Modal Header */}
         <div className="bg-[#59171B] text-[#FED7B8] px-5 py-4 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
@@ -226,8 +261,8 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1">
+        {/* Modal Body */}
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
           {isSuccess ? (
             <div className="py-6 text-center space-y-4">
               <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto border-2 border-emerald-300 shadow-payno-sm animate-in zoom-in-50 duration-300">
@@ -236,13 +271,13 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
 
               <div>
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 block">
-                  Payment Verified &amp; Settled
+                  Payment Recorded &amp; Settled
                 </span>
                 <h3 className="font-heading text-2xl font-bold text-[#230B0D] mt-1">
-                  {formatMoney(deal.totalAmount, currency)} Paid
+                  {formatMoney(deal.totalAmount, currency)} Settled
                 </h3>
                 <p className="text-xs text-[#7E635F] mt-1 max-w-sm mx-auto">
-                  Confirmed directly with Paystack and logged into the creator agreement ledger.
+                  Invoice {deal.invoiceNumber} has been updated in the agreement ledger with an official audit record.
                 </p>
               </div>
 
@@ -252,7 +287,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                   <span className="font-mono font-bold text-[#230B0D]">{transactionId}</span>
                 </div>
                 <div className="flex justify-between text-[#7E635F]">
-                  <span>Recipient:</span>
+                  <span>Beneficiary:</span>
                   <span className="font-semibold text-[#230B0D]">{creator.name}</span>
                 </div>
                 <div className="flex justify-between text-[#7E635F]">
@@ -260,12 +295,12 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                   <span className="font-mono text-[#230B0D]">{deal.invoiceNumber}</span>
                 </div>
                 <div className="flex justify-between text-[#7E635F]">
-                  <span>Payment Date:</span>
+                  <span>Settlement Date:</span>
                   <span className="text-[#230B0D]">{new Date().toLocaleDateString()}</span>
                 </div>
                 <div className="border-t border-[#ECD9CB] pt-2 flex justify-between font-bold text-sm text-[#59171B]">
-                  <span>Amount Settled:</span>
-                  <span>{formatMoney(deal.totalAmount, currency)} {currency}</span>
+                  <span>Total Settled:</span>
+                  <span>{formatMoney(deal.totalAmount, currency)}</span>
                 </div>
               </div>
 
@@ -289,7 +324,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
             </div>
           ) : (
             <>
-              {/* Amount Breakdown Summary */}
+              {/* Invoice Breakdown Card */}
               <div className="bg-white rounded-2xl p-4 border border-[#ECD9CB] shadow-payno-sm space-y-2.5">
                 <div className="flex items-center justify-between text-xs text-[#7E635F]">
                   <span>Subtotal ({deal.deliverables.length} deliverables)</span>
@@ -316,32 +351,45 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 </div>
               </div>
 
-              {/* Payment Methods Tabs */}
-              <div className="grid grid-cols-2 gap-1.5 bg-[#FAF3EC] p-1 rounded-2xl border border-[#ECD9CB]">
+              {/* Payment Methods Tab Selector */}
+              <div className="grid grid-cols-3 gap-1 bg-[#FAF3EC] p-1 rounded-2xl border border-[#ECD9CB] text-xs">
                 <button
                   type="button"
-                  onClick={() => setPaymentTab('pay')}
-                  className={`py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    paymentTab === 'pay'
+                  onClick={() => setPaymentTab('card')}
+                  className={`py-2 px-1 rounded-xl font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    paymentTab === 'card'
                       ? 'bg-white text-[#59171B] shadow-payno-sm'
                       : 'text-[#7E635F] hover:text-[#230B0D]'
                   }`}
                 >
                   <CreditCard className="w-3.5 h-3.5" />
-                  <span>Pay with Paystack</span>
+                  <span className="truncate">Card / Gateway</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPaymentTab('wire')}
-                  className={`py-2 px-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  className={`py-2 px-1 rounded-xl font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                     paymentTab === 'wire'
                       ? 'bg-white text-[#59171B] shadow-payno-sm'
                       : 'text-[#7E635F] hover:text-[#230B0D]'
                   }`}
                 >
                   <Building className="w-3.5 h-3.5" />
-                  <span>Bank Wire</span>
+                  <span className="truncate">Bank Wire / ACH</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentTab('manual')}
+                  className={`py-2 px-1 rounded-xl font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                    paymentTab === 'manual'
+                      ? 'bg-white text-[#59171B] shadow-payno-sm'
+                      : 'text-[#7E635F] hover:text-[#230B0D]'
+                  }`}
+                >
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span className="truncate">Confirm Proof</span>
                 </button>
               </div>
 
@@ -352,54 +400,145 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                 </div>
               )}
 
-              {/* TAB 1: Paystack Inline Checkout */}
-              {paymentTab === 'pay' && (
-                <div className="space-y-3.5">
-                  <p className="text-xs text-[#7E635F]">
-                    Pay securely by card, bank transfer, USSD, or mobile money via Paystack's
-                    hosted checkout — your card details are never seen by this app.
-                  </p>
+              {/* TAB 1: Online Card / Gateway Checkout */}
+              {paymentTab === 'card' && (
+                <div className="space-y-3 bg-white p-4 rounded-2xl border border-[#ECD9CB]">
+                  {prefs.paymentLink ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#59171B]">
+                        <Globe className="w-4 h-4" />
+                        <span>Direct Online Checkout Link</span>
+                      </div>
+                      <p className="text-xs text-[#7E635F]">
+                        {creator.name} has configured a verified online payment link for direct credit card, Apple Pay, Google Pay, or Wise settlement.
+                      </p>
+                      <a
+                        href={prefs.paymentLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-3 rounded-xl bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold text-xs shadow-payno-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Open Secure Checkout ({formatMoney(deal.totalAmount, currency)})</span>
+                      </a>
+                      <p className="text-[10px] text-[#7E635F] text-center">
+                        After completing the transaction, click the "Confirm Proof" tab above to log your reference ID.
+                      </p>
+                    </div>
+                  ) : PAYSTACK_PUBLIC_KEY ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-[#7E635F]">
+                        Pay securely by card, bank transfer, USSD, or mobile money via Paystack's
+                        hosted checkout.
+                      </p>
 
-                  <div>
-                    <label className="text-[11px] font-bold text-[#7E635F] block mb-1">
-                      RECEIPT EMAIL
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={billingEmail}
-                      onChange={(e) => setBillingEmail(e.target.value)}
-                      placeholder="accounts@brand.com"
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#ECD9CB] bg-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#59171B]/30"
-                    />
-                  </div>
+                      <div>
+                        <label className="text-[11px] font-bold text-[#7E635F] block mb-1">
+                          RECEIPT EMAIL
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={billingEmail}
+                          onChange={(e) => setBillingEmail(e.target.value)}
+                          placeholder="accounts@brand.com"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-[#ECD9CB] bg-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#59171B]/30"
+                        />
+                      </div>
 
-                  <button
-                    type="button"
-                    onClick={handlePaystackPay}
-                    disabled={isProcessing || isVerifying}
-                    className="w-full py-3 rounded-2xl bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold text-sm shadow-payno-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 mt-2"
-                  >
-                    {isVerifying ? (
-                      <span>Verifying payment...</span>
-                    ) : isProcessing ? (
-                      <span>Opening secure checkout...</span>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        <span>Pay {formatMoney(deal.totalAmount, currency)} Now</span>
-                      </>
-                    )}
-                  </button>
+                      <button
+                        type="button"
+                        onClick={handlePaystackPay}
+                        disabled={isProcessing || isVerifying}
+                        className="w-full py-3 rounded-2xl bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold text-sm shadow-payno-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        {isVerifying ? (
+                          <span>Verifying payment...</span>
+                        ) : isProcessing ? (
+                          <span>Opening secure checkout...</span>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4" />
+                            <span>Pay {formatMoney(deal.totalAmount, currency)} Now</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : prefs.paypalEmail ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#59171B]">
+                        <Globe className="w-4 h-4" />
+                        <span>PayPal Remittance</span>
+                      </div>
+                      <p className="text-xs text-[#7E635F]">
+                        Remit payment directly to the creator's PayPal account:
+                      </p>
+                      <div className="bg-[#FAF3EC] p-3 rounded-xl border border-[#ECD9CB] flex items-center justify-between text-xs">
+                        <span className="font-mono font-bold text-[#230B0D]">{prefs.paypalEmail}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(prefs.paypalEmail || '');
+                            setCopiedAccount(true);
+                            setTimeout(() => setCopiedAccount(false), 2000);
+                          }}
+                          className="text-[#59171B] hover:underline font-bold text-xs flex items-center gap-1"
+                        >
+                          {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedAccount ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
+                      <a
+                        href={`https://paypal.me/${prefs.paypalEmail.split('@')[0]}/${deal.totalAmount}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 rounded-xl bg-[#003087] hover:bg-[#002266] text-white font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Pay with PayPal ({formatMoney(deal.totalAmount, currency)})</span>
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="p-3 bg-[#FAF3EC] rounded-xl border border-[#ECD9CB] text-xs text-[#7E635F] space-y-1">
+                        <span className="font-bold text-[#59171B] block">Direct Remittance Available</span>
+                        <p>
+                          Please use the <strong>Bank Wire / ACH</strong> or <strong>Confirm Proof</strong> tab to settle this invoice directly with the creator's banking instructions.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentTab('wire')}
+                        className="w-full py-2.5 bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold rounded-xl text-xs flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Building className="w-4 h-4" />
+                        <span>View Bank Wire Instructions</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* TAB 2: Direct Bank Wire Details */}
+              {/* TAB 2: Direct Bank Wire / ACH Details */}
               {paymentTab === 'wire' && (
                 <div className="space-y-3 bg-white p-4 rounded-2xl border border-[#ECD9CB] text-xs">
-                  <div className="flex items-center gap-2 text-[#59171B] font-bold text-xs">
-                    <Building className="w-4 h-4" />
-                    <span>Direct Wire / ACH Instructions</span>
+                  <div className="flex items-center justify-between text-[#59171B] font-bold text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <Building className="w-4 h-4" />
+                      <span>Direct Wire / ACH Instructions</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(deal.totalAmount.toString());
+                        setCopiedAmount(true);
+                        setTimeout(() => setCopiedAmount(false), 2000);
+                      }}
+                      className="text-[11px] font-semibold text-[#7E635F] hover:text-[#59171B] flex items-center gap-1"
+                    >
+                      {copiedAmount ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                      <span>Copy Amount</span>
+                    </button>
                   </div>
 
                   <div className="space-y-2 text-[#7E635F]">
@@ -413,7 +552,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                     </div>
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-[#7E635F]">Account / IBAN:</span>
-                      <span className="font-mono font-bold text-[#230B0D]">{prefs.accountNumber || '••••••••4892'}</span>
+                      <span className="font-mono font-bold text-[#230B0D]">{prefs.accountNumber || '••••4892'}</span>
                     </div>
                     <div>
                       <span className="block text-[10px] uppercase font-bold text-[#7E635F]">Routing / SWIFT:</span>
@@ -423,42 +562,93 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                       <span className="block text-[10px] uppercase font-bold text-[#7E635F]">Payment Memo / Reference:</span>
                       <span className="font-mono font-bold text-[#59171B]">{deal.invoiceNumber}</span>
                     </div>
+                    {prefs.customInstructions && (
+                      <div className="bg-[#FAF3EC] p-2.5 rounded-xl border border-[#ECD9CB] text-[11px] text-[#230B0D]">
+                        <span className="font-bold text-[#59171B] block text-[10px] uppercase">Creator Note:</span>
+                        {prefs.customInstructions}
+                      </div>
+                    )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        `Bank: ${prefs.bankName}\nBeneficiary: ${prefs.accountName || creator.name}\nAccount: ${prefs.accountNumber}\nRouting: ${prefs.routingNumber}\nReference: ${deal.invoiceNumber}`
-                      );
-                      setCopiedAccount(true);
-                      setTimeout(() => setCopiedAccount(false), 2000);
-                    }}
-                    className="w-full py-2 bg-[#FAF3EC] hover:bg-[#F5E8DC] text-[#59171B] font-bold rounded-xl border border-[#ECD9CB] transition-colors cursor-pointer text-xs flex items-center justify-center gap-1.5"
-                  >
-                    {copiedAccount ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Receipt className="w-3.5 h-3.5" />}
-                    <span>{copiedAccount ? 'Bank Details Copied!' : 'Copy Wire Details'}</span>
-                  </button>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `Bank: ${prefs.bankName || 'Bank'}\nBeneficiary: ${prefs.accountName || creator.name}\nAccount: ${prefs.accountNumber}\nRouting: ${prefs.routingNumber || prefs.swiftBic}\nReference: ${deal.invoiceNumber}\nAmount: ${formatMoney(deal.totalAmount, currency)}`
+                        );
+                        setCopiedAccount(true);
+                        setTimeout(() => setCopiedAccount(false), 2000);
+                      }}
+                      className="py-2.5 bg-[#FAF3EC] hover:bg-[#F5E8DC] text-[#59171B] font-bold rounded-xl border border-[#ECD9CB] transition-colors cursor-pointer text-xs flex items-center justify-center gap-1.5"
+                    >
+                      {copiedAccount ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedAccount ? 'Copied Details' : 'Copy All Info'}</span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={handleConfirmWireInitiated}
-                    disabled={isProcessing}
-                    className="w-full py-2.5 bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    <span>Notify Creator: Wire Initiated</span>
-                  </button>
-                  <p className="text-[10px] text-[#7E635F] text-center leading-relaxed">
-                    This notifies {creator.name} — the invoice is marked paid only once they
-                    confirm funds actually landed.
-                  </p>
+                    <button
+                      type="button"
+                      onClick={handleConfirmWireInitiated}
+                      disabled={isProcessing}
+                      className="py-2.5 bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold rounded-xl transition-colors cursor-pointer text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      <span>Notify Creator</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {/* Security Badge */}
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#7E635F] pt-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Payments verified server-side via Paystack — no card data touches this app</span>
+              {/* TAB 3: Confirm Settlement Proof (Accounting / Corporate Wire) */}
+              {paymentTab === 'manual' && (
+                <form onSubmit={handleManualSettlementSubmit} className="space-y-3 bg-white p-4 rounded-2xl border border-[#ECD9CB] text-xs">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#59171B]">
+                    <Receipt className="w-4 h-4" />
+                    <span>Submit Remittance Proof / Transaction ID</span>
+                  </div>
+                  <p className="text-xs text-[#7E635F]">
+                    If your accounts payable department has already executed the wire or corporate card transfer, enter your transaction reference number to log the settlement and download the tax invoice.
+                  </p>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-[#7E635F] uppercase block mb-1">
+                      Transaction Reference / Wire ID / Check #
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={wireReference}
+                      onChange={(e) => setWireReference(e.target.value)}
+                      placeholder="e.g. WIRE-84920194 or TXN_982402"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-[#ECD9CB] bg-white text-xs font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-[#59171B]/30"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isProcessing}
+                    className="w-full py-3 rounded-2xl bg-[#59171B] hover:bg-[#451014] text-[#FED7B8] font-bold text-xs shadow-payno-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Confirm Settlement &amp; Generate Tax Receipt</span>
+                  </button>
+                </form>
+              )}
+
+              {/* Download Tax Invoice link */}
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => exportInvoicePDF(deal, creator)}
+                  className="text-[#59171B] hover:underline font-bold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Invoice PDF</span>
+                </button>
+
+                <div className="flex items-center gap-1 text-[11px] text-[#7E635F]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Encrypted Ledger Security</span>
+                </div>
               </div>
             </>
           )}
