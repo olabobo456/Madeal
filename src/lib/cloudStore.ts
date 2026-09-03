@@ -105,19 +105,7 @@ export function subscribeToDeals(
       (snapshot) => {
         const loadedDeals: Deal[] = [];
         snapshot.forEach((docSnap) => {
-          const dealData = docSnap.data() as Deal;
-          // Filter out legacy mock data if it was previously saved
-          if (
-            dealData.creatorHandle === '@sarahcreates' ||
-            dealData.brandName === 'Lumina Skincare' ||
-            dealData.brandName === 'Apex Performance' ||
-            dealData.brandName === 'NordVPN' ||
-            dealData.brandName === 'Bloom Nutrition'
-          ) {
-            deleteDealFromCloud(dealData.id);
-            return;
-          }
-          loadedDeals.push(dealData);
+          loadedDeals.push(docSnap.data() as Deal);
         });
         loadedDeals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         onUpdate(loadedDeals);

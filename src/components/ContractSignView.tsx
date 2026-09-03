@@ -407,6 +407,19 @@ export const ContractSignView: React.FC<ContractSignViewProps> = ({
                 {deal.revisions} rounds • {deal.lateFeePercent || 1.5}% late fee
               </span>
             </div>
+
+            {/* Cancellation Fee Card */}
+            <div className="bg-[#FAF3EC] p-3.5 rounded-2xl border border-[#ECD9CB] space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-[#7E635F]">
+                  Cancellation Fee
+                </span>
+                <TermInfoTooltip info={OTHER_LEGAL_TERMS.cancellationFee} />
+              </div>
+              <span className="font-semibold text-[#230B0D] block">
+                {deal.cancellationFeePercent ?? 20}% if cancelled after signing
+              </span>
+            </div>
           </div>
         </div>
 

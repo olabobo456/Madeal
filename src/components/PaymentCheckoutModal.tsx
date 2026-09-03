@@ -455,7 +455,7 @@ export const PaymentCheckoutModal: React.FC<PaymentCheckoutModalProps> = ({
                       <div className="p-3 bg-[#FAF3EC] rounded-xl border border-[#ECD9CB] text-xs text-[#7E635F] space-y-1">
                         <span className="font-bold text-[#59171B] block">Direct Remittance Available</span>
                         <p>
-                          Please use the <strong>Bank Wire / ACH</strong> or <strong>Confirm Proof</strong> tab to settle this invoice directly with the creator's banking instructions.
+                          Please use the <strong>Bank Wire / ACH</strong> tab to settle this invoice directly with the creator's banking instructions.
                         </p>
                       </div>
                       <button

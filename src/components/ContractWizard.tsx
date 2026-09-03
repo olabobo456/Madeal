@@ -63,6 +63,7 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
   const [usageTerm, setUsageTerm] = useState(initialDeal?.usageTerm || '90 Days Paid Ads');
   const [revisions, setRevisions] = useState(initialDeal?.revisions || 2);
   const [lateFeePercent, setLateFeePercent] = useState(initialDeal?.lateFeePercent || 1.5);
+  const [cancellationFeePercent, setCancellationFeePercent] = useState(initialDeal?.cancellationFeePercent ?? 20);
   const [notes, setNotes] = useState(initialDeal?.notes || '');
 
   // Calculate total amount & tax
@@ -179,6 +180,7 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
       usageTerm,
       revisions,
       lateFeePercent,
+      cancellationFeePercent,
       invoiceNumber: initialDeal?.invoiceNumber || `INV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
       clientSigned: false,
       notes,
@@ -731,6 +733,30 @@ export const ContractWizard: React.FC<ContractWizardProps> = ({
                   max="10"
                   value={lateFeePercent}
                   onChange={(e) => setLateFeePercent(Number(e.target.value))}
+                  className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3.5 py-2.5 text-xs text-[#230B0D] font-medium outline-none"
+                />
+                <span className="absolute right-3.5 top-2.5 text-xs font-bold text-[#7E635F]">
+                  %
+                </span>
+              </div>
+            </div>
+
+            {/* Cancellation Fee */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-bold text-[#7E635F] uppercase tracking-wider">
+                  Cancellation Fee (% of total, if brand cancels after signing)
+                </label>
+                <TermInfoTooltip info={OTHER_LEGAL_TERMS.cancellationFee} />
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="5"
+                  min="0"
+                  max="100"
+                  value={cancellationFeePercent}
+                  onChange={(e) => setCancellationFeePercent(Number(e.target.value))}
                   className="w-full bg-[#FAF3EC] border border-[#ECD9CB] focus:border-[#59171B] rounded-xl px-3.5 py-2.5 text-xs text-[#230B0D] font-medium outline-none"
                 />
                 <span className="absolute right-3.5 top-2.5 text-xs font-bold text-[#7E635F]">

@@ -99,11 +99,14 @@ export async function resetPassword(email: string): Promise<void> {
     await sendPasswordResetEmail(auth, email.trim());
   } catch (error: any) {
     const code = error?.code;
-    if (code === 'auth/user-not-found') {
-      throw new Error('No account found with this email address.');
-    }
     if (code === 'auth/invalid-email') {
       throw new Error('Please enter a valid email address.');
+    }
+    if (code === 'auth/user-not-found') {
+      // Deliberately do nothing — don't reveal whether this email has
+      // an account. Firebase only actually sends the email if it does;
+      // the UI shows the same "check your inbox" message either way.
+      return;
     }
     throw new Error(error?.message || 'Failed to send password reset email.');
   }

@@ -614,7 +614,7 @@ export default function App() {
             ? 'Drafting Agreement'
             : currentView === 'contract_sign'
             ? selectedDeal?.status === 'paid'
-              ? 'Settled via Stripe'
+              ? 'Settled'
               : 'Pending Signature'
             : undefined
         }

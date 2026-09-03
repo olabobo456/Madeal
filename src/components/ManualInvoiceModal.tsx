@@ -117,6 +117,7 @@ export const ManualInvoiceModal: React.FC<ManualInvoiceModalProps> = ({
       usageTerm: '30 Days Standard Usage',
       revisions: 2,
       lateFeePercent: 1.5,
+      cancellationFeePercent: 20,
       totalAmount,
       invoiceNumber,
       clientSigned: false,

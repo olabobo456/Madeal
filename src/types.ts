@@ -41,6 +41,7 @@ export interface Deal {
   usageTerm: string;
   revisions: number;
   lateFeePercent: number;
+  cancellationFeePercent: number;
   totalAmount: number;
   subtotal?: number;
   taxRate?: number;

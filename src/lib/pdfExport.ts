@@ -281,6 +281,8 @@ export function exportContractPDF(deal: Deal, creator: CreatorProfile) {
   doc.text(`• Included Revisions: ${deal.revisions} rounds`, 18, y);
   y += 4.5;
   doc.text(`• Payment Due Date: ${deal.dueDate.split('T')[0]} (Late fee: ${deal.lateFeePercent}% / month)`, 18, y);
+  y += 4.5;
+  doc.text(`• Cancellation Fee: ${deal.cancellationFeePercent ?? 20}% of total fee if cancelled by brand after signing`, 18, y);
 
   y += 8;
   doc.setTextColor(89, 23, 27);

@@ -122,4 +122,13 @@ export const OTHER_LEGAL_TERMS: Record<string, TermExplanation> = {
     creatorTip: 'Whitelisted ads often gain higher engagement because they feel organic, making them extremely valuable to brands.',
     brandTakeaway: 'Proven to lower customer acquisition costs by combining paid ad targeting with authentic creator credibility.',
   },
+  cancellationFee: {
+    term: 'Cancellation Fee',
+    title: 'Cancellation / Kill Fee',
+    shortLayman: 'A percentage of the total fee the brand still owes if they cancel the campaign after signing.',
+    fullExplanation:
+      'A standard commercial protection clause. If the brand or client cancels the campaign after this agreement is signed and the creator has already reserved time or begun work, the brand remains contractually obligated to pay this percentage of the total agreed fee to compensate the creator for reserved calendar time and preparatory work already performed.',
+    creatorTip: 'This is a contractual right, not an automatic charge — it is enforced the same way any other clause in this agreement would be, through direct discussion or, if needed, standard commercial dispute resolution.',
+    brandTakeaway: 'A standard protection against last-minute cancellations after a creator has already reserved production time.',
+  },
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ShieldCheck,
   FileCheck,
@@ -49,38 +49,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
   // FAQ Accordion State
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  // Live Activity Pill Rotator with plain English descriptions
-  const activityList = [
-    { creator: '@sarahfilms', brand: 'Notion', amount: '$4,200', tag: '20% Cancellation Protection Locked', time: '2m ago' },
-    { creator: '@techwithleo', brand: 'NordVPN', amount: '$6,500', tag: 'Paid Within 15 Days Direct to Bank', time: '8m ago' },
-    { creator: '@emilyglows', brand: 'Glossier', amount: '$2,800', tag: 'Paid Ad Rights Capped at 30 Days', time: '14m ago' },
-    { creator: '@fitcoachmike', brand: 'Gymshark', amount: '$5,000', tag: 'Signed on Mobile in 30 Seconds', time: '21m ago' },
-  ];
-  const [activeActivityIndex, setActiveActivityIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveActivityIndex((prev) => (prev + 1) % activityList.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, [activityList.length]);
-
-  // Brand logos for infinite marquee
-  const brandList = [
-    'Nike',
-    'Notion',
-    'Gymshark',
-    'Glossier',
-    'NordVPN',
-    'Spotify',
-    'Adobe',
-    'Duolingo',
-    'Sephora',
-    'Athletic Greens',
-    'Casetify',
-    'Squarespace',
-  ];
-
   // Calculated values for simulator
   const paidAdsSurcharge = simulatorPaidAds === '30days' ? 0.2 : simulatorPaidAds === '60days' ? 0.35 : 0;
   const effectiveTotalFee = Math.round(simulatorFee * (1 + paidAdsSurcharge));
@@ -93,7 +61,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
     },
     {
       q: 'What is a "Cancellation Fee", and why do I need one?',
-      a: 'Brands and clients frequently change their marketing plans or cancel campaigns after you have already spent hours brainstorming, scripting, or reserving dates on your calendar. Without cancellation protection, you get paid $0. With Madeal, if a brand or client cancels after signing, they are legally required to pay you 20% of the deal for your reserved time.',
+      a: 'Brands and clients frequently change their marketing plans or cancel campaigns after you have already spent hours brainstorming, scripting, or reserving dates on your calendar. Without cancellation protection, you get paid $0. Every Madeal contract includes a cancellation fee clause you set yourself when drafting the deal — it defaults to 20%, but you can adjust it per contract. If a brand or client cancels after signing, they owe you that percentage of the deal for your reserved time.',
     },
     {
       q: 'What are "Paid Ad Rights" (Whitelisting / Spark Ads)?',
@@ -174,31 +142,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
         </div>
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 text-center">
-          {/* Floating Live Activity Ticker */}
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/95 border border-[#ECD9CB] text-xs shadow-payno-sm transition-all duration-300">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="font-mono font-bold text-[#59171B]">
-              {activityList[activeActivityIndex].creator}
-            </span>
-            <span className="text-[#7E635F]">secured</span>
-            <span className="font-bold text-[#230B0D]">
-              {activityList[activeActivityIndex].amount}
-            </span>
-            <span className="hidden sm:inline text-[#7E635F]">from</span>
-            <span className="hidden sm:inline font-bold text-[#59171B]">
-              {activityList[activeActivityIndex].brand}
-            </span>
-            <span className="hidden md:inline px-2 py-0.5 rounded-md bg-[#FAF3EC] text-[10px] font-semibold text-[#59171B] border border-[#ECD9CB]">
-              {activityList[activeActivityIndex].tag}
-            </span>
-            <span className="text-[10px] text-[#7E635F]/80">
-              • {activityList[activeActivityIndex].time}
-            </span>
-          </div>
-
           {/* Main Headline - All Creator Services */}
           <div className="space-y-4 max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FED7B8]/50 border border-[#ECD9CB] text-xs font-bold text-[#59171B]">
@@ -248,7 +191,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Direct Bank, Stripe & PayPal Payouts</span>
+              <span>Direct Bank & Card Payouts via Paystack</span>
             </div>
           </div>
         </div>
@@ -322,7 +265,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   Invoicing & Payouts
                 </span>
                 <p className="text-xs text-[#7E635F] leading-relaxed">
-                  Automatic matching invoice PDFs. Automated polite payment reminders ensure your money lands directly in your bank account on time.
+                  Automatic matching invoice PDFs, plus ready-to-send payment reminder drafts when a brand runs late — one click to send.
                 </p>
               </div>
             </div>
@@ -550,7 +493,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   <div className="flex items-center justify-between text-xs pt-1.5 border-t border-[#F5E8DC]">
                     <div className="flex items-center gap-1.5 text-emerald-700 font-bold">
                       <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                      <span>20% Cancellation Pay Guarantee:</span>
+                      <span>Cancellation Pay Protection:</span>
                     </div>
                     <span className="font-bold text-emerald-700 font-mono">
                       ${guaranteedKillFee.toLocaleString()} USD
@@ -558,7 +501,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   </div>
 
                   <p className="text-[11px] text-[#7E635F] leading-tight">
-                    *If {simulatorBrand} cancels after you start scripting or shooting, you are legally guaranteed <strong>${guaranteedKillFee.toLocaleString()} USD (20%)</strong> for your reserved calendar time.
+                    *If {simulatorBrand} cancels after you start scripting or shooting, your contract entitles you to <strong>${guaranteedKillFee.toLocaleString()} USD (20% shown here — you set your own %)</strong> for your reserved calendar time.
                   </p>
                 </div>
 
@@ -594,36 +537,6 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* INFINITE LOGO MARQUEE: SPONSOR BRANDS */}
-      {/* ------------------------------------------------------------- */}
-      <section className="py-8 bg-white border-b border-[#ECD9CB] overflow-hidden relative">
-        <div className="max-w-7xl mx-auto px-4 mb-4 text-center">
-          <p className="text-[11px] font-bold text-[#7E635F] uppercase tracking-wider">
-            Used by creators partnering with global sponsor brands & direct clients
-          </p>
-        </div>
-
-        {/* Gradient Mask Overlays */}
-        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none"></div>
-        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none"></div>
-
-        {/* Animated Marquee Row */}
-        <div className="animate-marquee flex items-center gap-10">
-          {[...brandList, ...brandList, ...brandList].map((brand, idx) => (
-            <div
-              key={idx}
-              className="flex items-center gap-2.5 px-4 py-2 rounded-xl bg-[#FAF3EC] border border-[#ECD9CB] shadow-payno-sm shrink-0 hover:border-[#59171B] transition-colors"
-            >
-              <div className="w-2 h-2 rounded-full bg-[#59171B]"></div>
-              <span className="font-heading font-black text-xs text-[#230B0D] tracking-wide">
-                {brand}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------- */}
       {/* ASYMMETRIC BENTO GRID: ALL-IN-ONE BUSINESS SUITE (Plain English) */}
       {/* ------------------------------------------------------------- */}
       <section id="features" className="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
@@ -648,16 +561,16 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold self-start">
-                Guaranteed 20% Cancellation Pay
+                Cancellation Pay Protection (You Set the %)
               </span>
             </div>
 
             <div className="space-y-2">
               <h3 className="font-heading text-xl font-bold text-[#230B0D]">
-                Get Paid 20% Even If the Brand or Client Cancels
+                Get Paid Even If the Brand or Client Cancels
               </h3>
               <p className="text-xs sm:text-sm text-[#7E635F] leading-relaxed max-w-xl">
-                Ever spent days planning a project only for the client to say "our campaign is paused"? Without Madeal, you get $0. With Madeal, if a brand or client pulls out after signing, you automatically keep 20% of the deal fee for your reserved calendar time.
+                Ever spent days planning a project only for the client to say "our campaign is paused"? Without Madeal, you get $0. With Madeal, every contract includes a cancellation fee clause — starting at 20%, fully customizable per deal — so a brand or client who pulls out after signing still owes you for your reserved calendar time.
               </p>
             </div>
 
@@ -668,7 +581,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   <XCircle className="w-4 h-4" /> Without Madeal: $0 (Wasted time)
                 </span>
                 <span className="text-emerald-700 flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" /> With Madeal: $1,000 Protected (20%)
+                  <CheckCircle2 className="w-4 h-4" /> With Madeal: $1,000 Protected (20% default)
                 </span>
               </div>
               <div className="h-3 w-full bg-rose-200 rounded-full overflow-hidden flex">
@@ -687,7 +600,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 Keep 100% of What You Earn
               </h3>
               <p className="text-xs text-[#7E635F] leading-relaxed">
-                Talent agencies take 20% of your paycheck. Madeal charges 0% commission. Brand & client payments go directly to your bank account or Stripe.
+                Talent agencies take 20% of your paycheck. Madeal charges 0% commission. Brand & client payments go directly to your bank account via Paystack.
               </p>
             </div>
             <div className="bg-[#FAF3EC] p-3 rounded-xl border border-[#ECD9CB] text-center">
@@ -779,7 +692,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                   <td className="p-4 sm:p-5 font-bold text-[#230B0D]">Brand or Client Cancels After You Prep</td>
                   <td className="p-4 sm:p-5 text-rose-700">You get $0 for hours of creative work</td>
                   <td className="p-4 sm:p-5 font-bold text-emerald-700 bg-[#FED7B8]/10">
-                    Guaranteed 20% cancellation payout
+                    Cancellation payout — starting at 20%, you set the %
                   </td>
                 </tr>
                 <tr>
@@ -883,7 +796,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>20% Cancellation Fee Guarantee</span>
+                  <span>Customizable Cancellation Fee (Starts at 20%)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -930,7 +843,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#FED7B8] shrink-0" />
-                  <span>Automated Overdue Payment Reminders</span>
+                  <span>One-Click Overdue Payment Reminder Drafts</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-[#FED7B8] shrink-0" />
@@ -1052,7 +965,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({
               Stop Leaving Money on the Table for Your Work.
             </h2>
             <p className="text-xs sm:text-base text-[#7E635F] max-w-xl mx-auto leading-relaxed">
-              Whether you do sponsorships, UGC, video production, or consulting: protect your time with guaranteed 20% cancellation pay, send one-link contracts, and get paid on time by every brand and client.
+              Whether you do sponsorships, UGC, video production, or consulting: protect your time with a customizable cancellation fee (starting at 20%), send one-link contracts, and get paid on time by every brand and client.
             </p>
           </div>
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">

@@ -302,6 +302,10 @@ export const BrandPortalView: React.FC<BrandPortalViewProps> = ({
                   <span className="text-[10px] font-bold text-[#7E635F] uppercase block mb-1">Late Settlement</span>
                   <span className="font-semibold text-[#230B0D]">{deal.lateFeePercent || 1.5}% / month</span>
                 </div>
+                <div className="bg-[#FAF3EC] p-3 rounded-2xl border border-[#ECD9CB]">
+                  <span className="text-[10px] font-bold text-[#7E635F] uppercase block mb-1">Cancellation Fee</span>
+                  <span className="font-semibold text-[#230B0D]">{deal.cancellationFeePercent ?? 20}% if cancelled</span>
+                </div>
               </div>
 
               {/* Scope of Deliverables Fulfillment */}
